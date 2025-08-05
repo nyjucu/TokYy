@@ -1,0 +1,79 @@
+import numpy as np
+import torch
+import torchvision.transforms as T
+import random
+import cv2
+from PIL import Image
+
+from tokyy.utils import LogType, log_message
+
+
+class Resize:
+    def __init__(self, size):
+        self.size = size
+
+    def __call__( self, rgb, depth ):
+        if rgb.shape[ 0 ] == 3:
+            rgb = np.transpose( rgb, ( 1, 2, 0 ) )
+
+        rgb = cv2.resize( rgb, ( self.size[ 1 ], self.size[ 0 ] ), interpolation = cv2.INTER_LINEAR )
+        depth = cv2.resize( depth, ( self.size[ 1 ], self.size[ 0 ]), interpolation = cv2.INTER_NEAREST )
+        return rgb, depth
+
+
+class RandomHorizontalFlip:
+    def __init__( self, p = 0.5 ):
+        self.p = p
+
+    def __call__( self, rgb, depth ):
+        if random.random() < self.p:
+            rgb = np.ascontiguousarray( np.fliplr( rgb ) )
+            depth = np.ascontiguousarray( np.fliplr( depth ) )
+        return rgb, depth
+
+
+class RandomCrop:
+    def __init__( self, size ):
+        self.size = size
+
+    def __call__( self, rgb, depth ):
+        h, w = rgb.shape[ : 2 ]
+        th, tw = self.size
+        if h < th or w < tw:
+            raise log_message( LogType.ERROR, f"Crop size { self.size } is bigger than image size { ( h, w ) }" )
+
+        i = random.randint( 0, h - th )
+        j = random.randint( 0, w - tw )
+        rgb = rgb[ i : i + th, j : j + tw, : ]
+        depth = depth[ i : i + th, j : j + tw ]
+
+        return rgb, depth
+
+
+class ToTensor:
+    def __call__( self, rgb, depth ):
+        rgb = torch.from_numpy( rgb.transpose( 2, 0, 1 ) ).float() / 255.0
+        depth = torch.from_numpy( depth ).unsqueeze( 0 ).float() / 10.0
+        return rgb, depth
+
+
+class ColorJitter:
+    def __init__( self, brightness = 0.4, contrast = 0.4, saturation = 0.4, hue = 0.1 ):
+        self.jitter = T.ColorJitter( brightness, contrast, saturation, hue )
+
+    def __call__( self, rgb, depth ):
+        rgb_pil = Image.fromarray( rgb )
+        rgb_pil = self.jitter( rgb_pil )
+        rgb = np.array( rgb_pil )
+        return rgb, depth
+
+
+class PairedCompose:
+    def __init__( self, transforms ):
+        self.transforms = transforms
+
+    def __call__( self, rgb, depth ):
+        for t in self.transforms:
+            rgb, depth = t( rgb, depth )
+
+        return rgb, depth
