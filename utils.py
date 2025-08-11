@@ -4,7 +4,7 @@ from enum import Enum
 from tokyy import CHECKPOINTS_DIR
 from pathlib import Path
 import argparse
-import os
+import sys
 
 
 class LogType( Enum ):
@@ -22,10 +22,10 @@ def ask_yes_no( question ):
         elif answer in ( 'n', 'no', 'N' ):
             return False
         else:
-            print( "Please enter Y or N." )
+            print( "Invalid command." )
 
 
-def log_message( type, msj = '' ):
+def log_message( type, msj = '', exit = False ):
     if type == LogType.ERROR:
         print( '\033[31m[  ERROR  ]\033[0m', end = ' ' )
 
@@ -44,27 +44,36 @@ def log_message( type, msj = '' ):
 
     print( now.strftime( "%H:%M:%S" ) )
 
+    if exit == True:
+        sys.exit( 1 )
+
     return type
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
-    parser.add_argument( "--no_ask_before", action = "store_true", help = "Disable confirmation prompts in Trainer")
+    parser.add_argument( "--no-ask-before", action = "store_true", help = "Disable confirmation prompts in Trainer")
 
-    parser.add_argument( "--checkpoint_dir", type = Path, default = CHECKPOINTS_DIR, help = "Path to the checkpoint directory. Default at /checkpoints" )
-    parser.add_argument( "--checkpoint_name", type = str, default = "default.pt", help = "Checkpoint file name." )
+    parser.add_argument( "--checkpoint-dir", type = Path, default = CHECKPOINTS_DIR, help = "Path to the checkpoint directory. Default at /checkpoints" )
+    parser.add_argument( "--checkpoint-name", type = str, default = "default.pt", help = "Checkpoint file name." )
 
-    parser.add_argument( "--image_size", nargs = 2, type = int, default = [ 128, 128 ], help = "Image size (height width).")
-    parser.add_argument( "--batch_size", type = int, default = 32, help = "Training batch size." )
-    parser.add_argument( "--accum_steps", type = int, default = 2, help = "Gradient accumulation steps." )
+    parser.add_argument( "--image-size", nargs = 2, type = int, default = [ 128, 128 ], help = "Image size (height width).")
+    parser.add_argument( "--batch-size", type = int, default = 32, help = "Training batch size." )
+    parser.add_argument( "--accum-steps", type = int, default = 1, help = "Gradient accumulation steps." )
 
-    parser.add_argument( "--architecture", type = str, default = "resunet", help = "Architecture of the model to train [resunet, cbam, atrous]." )
+    parser.add_argument( "--architecture", type = str, default = "cbam", help = "Architecture of the model to train [resunet, cbam, atrous]." )
 
     args = parser.parse_args()
 
     args.checkpoint_path = args.checkpoint_dir / args.checkpoint_name
     log_message( LogType.NONE, f"Checkpoint absolute path is { args.checkpoint_path }" )
+    name_to_architecture = {
+        "resunet" : "ResUNet",
+        "cbam" : "ResCBAMUNet",
+        "atrous" : "AtrousResCBAMUNet"
+    }
+    log_message( LogType.NONE, f"Model architecture is set to { name_to_architecture[ args.architecture ] }" )
     args.image_size = tuple( args.image_size )
     log_message( LogType.NONE, f"Model will begin training on input size (re)shaped to { args.image_size }" )
     log_message( LogType.NONE, f"Dataset loaders batch size set to { args.batch_size }" )
@@ -79,25 +88,41 @@ def parse_args() -> argparse.Namespace:
 def parse_test_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
-    parser.add_argument( "--show", action = "store_true", help = "Traverse dataset." )
-    parser.add_argument( "--batch", action = "store_true", help = "Calculate max batch size on without raising OOM." )
-    parser.add_argument( "--dataset", action = "store_true", help = "Print dataset data." )
-    parser.add_argument( "--predict", action = "store_true", help = "Save 8 predictions and their ground truths." )
-    parser.add_argument( "--graphs", action = "store_true", help = "Print dataset data." )
-    parser.add_argument( "--one", action = "store_true", help = "Predict test.png" )
+    parser.add_argument( "--show", action = "store_true", default=False, help = "Traverse dataset." )
+    parser.add_argument( "--batch", action = "store_true", default=False, help = "Calculate max batch size on without raising OOM." )
+    parser.add_argument( "--dataset", action = "store_true", default=False, help = "Print dataset data." )
+    parser.add_argument( "--predict", action = "store_true", default=False, help = "Save 8 predictions and their ground truths." )
+    parser.add_argument( "--graphs", action = "store_true", default=False, help = "Print dataset data." )
+    parser.add_argument( "--one", action = "store_true", default=False, help = "Predict test.png" )
 
-    parser.add_argument( "--checkpoint_dir", type = Path, default = CHECKPOINTS_DIR, help = "Path to the checkpoint directory. Default at /checkpoints" )
-    parser.add_argument( "--checkpoint_name", type = str, default = "default", help = "Checkpoint file name." )
+    parser.add_argument( "--checkpoint-dir", type = Path, default = CHECKPOINTS_DIR, help = "Path to the checkpoint directory. Default at /checkpoints" )
+    parser.add_argument( "--checkpoint-name", type = str, default = "default", help = "Checkpoint file name." )
 
     parser.add_argument( "--architecture", type = str, default = "resunet", help = "Architecture of the model to train [resunet, cbam, atrous]." )
 
     args = parser.parse_args()
 
-    args.checkpoint_path = args.checkpoint_dir / f"{ args.checkpoint_name }.pt"
+    args.checkpoint_path = args.checkpoint_dir / f"{ args.checkpoint_name }"
     log_message( LogType.NONE, f"Checkpoint absolute path is { args.checkpoint_path }" )
 
-    if args.checkpoint_name.endswith( ( ".pt", ".pth", ".ckpt" ) ):
-        log_message( LogType.ERROR, "The provided checkpoint should not end with .pt, .pth, or .ckpt" )
-        return None 
-    
     return args
+
+def get_new_file_number( dir_path : Path ) -> str:
+    max_number = 0
+    has_file = False
+
+    for file in dir_path.iterdir():
+        if file.is_file():
+            has_file = True  
+            number = int( file.name[ : 2 ] )
+            if max_number < number: max_number = number
+
+    if has_file is False:
+        return "00"
+
+    max_number += 1
+
+    if max_number < 10: 
+        return ( "0" + str( max_number ) )
+    
+    return str( max_number )

@@ -45,25 +45,30 @@ def berhu_loss( pred, target ):
 def gradient_x( img ):
     return img[ :, :, :, :-1 ] - img[ :, :, :, 1: ]
 
+
 def gradient_y(img):
     return img[ :, :, :-1, : ] - img[ :, :, 1:, : ]
 
-def edge_aware_smoothness_loss( depth, image ):
+
+def edge_aware_smoothness_loss( depth, pred ):
     depth_grad_x = gradient_x( depth )
     depth_grad_y = gradient_y( depth )
-    image_grad_x = gradient_x( image ).abs().mean( 1, keepdim = True )
-    image_grad_y = gradient_y( image ).abs().mean( 1, keepdim = True )
+    pred_grad_x = gradient_x( pred ).abs().mean( 1, keepdim = True )
+    pred_grad_y = gradient_y( pred ).abs().mean( 1, keepdim = True )
     
-    smoothness_x = depth_grad_x * torch.exp( -image_grad_x )
-    smoothness_y = depth_grad_y * torch.exp( -image_grad_y )
+    smoothness_x = depth_grad_x * torch.exp( - pred_grad_x )
+    smoothness_y = depth_grad_y * torch.exp( - pred_grad_y )
     
     return smoothness_x.abs().mean() + smoothness_y.abs().mean()
 
 
-def scale_invariant_loss(pred, target, mask=None):
+def scale_invariant_loss( pred, target, epsilon = 1e-6, mask = None ):
     if mask is not None:
         pred = pred[ mask ]
         target = target[ mask ]
+
+    pred = torch.clamp( pred, min = epsilon )
+    target = torch.clamp( target, min = epsilon )
 
     diff = torch.log( pred ) - torch.log( target )
     n = diff.numel()
@@ -75,37 +80,57 @@ def scale_invariant_loss(pred, target, mask=None):
 
 
 class DepthLoss( nn.Module ):
-    def __init__( self, lambda_depth = 0.1, lambda_ssim = 1.0, kernel_size = 5 ):
+    def __init__( self, lambda_depth = 0.1, lambda_grad = 1.0, lambda_ssim = 1.0, kernel_size = 5 ):
         super().__init__()
 
         self.lambda_depth = lambda_depth
+        self.lambda_grad = lambda_grad
         self.lambda_ssim = lambda_ssim
+        
         self.ssim = StructuralSimilarityIndexMeasure( data_range = 1.0, kernel_size = kernel_size )
 
+        self._losses = [ "depth", "gradient", "ssim" ]
+
     def forward( self, pred, target ):
-        l_depth = depth_loss( pred, target )
-        l_grad = gradient_loss( pred, target )
-        l_ssim = ssim_loss( pred, target, self.ssim )
+        _losses = {
+            "depth" : depth_loss( pred, target ) * self.lambda_depth,
+            "gradient" : gradient_loss( pred, target ) * self.labda_grad,
+            "ssim" : ssim_loss( pred, target, self.ssim ) * self.lambda_ssim
+        }
 
-        # print( f"l_depth: {l_depth:.4f} | {self.lambda_depth * l_depth:.4f}" )
-        # print( f"l_grad: {l_grad:.4f}" )
-        # print( f"l_ssim: {l_ssim:.4f} | {self.lambda_ssim * l_ssim:.4f}" )
-
-        return self.lambda_depth * l_depth + l_grad + self.lambda_ssim * l_ssim
+        return sum( _losses.values() ), _losses
 
 
 class DepthLossV2( nn.Module ):
     def __init__( self, lambda_berhu = 1.0, lambda_ews = 1.0, lambda_si = 1.0, lambda_ssim = 1.0, kernel_size = 5 ):
+        super().__init__()
+
         self.lambda_berhu = lambda_berhu
         self.lambda_ews = lambda_ews
         self.lambda_si = lambda_si
+        self.lambda_ssim = lambda_ssim
+
         self.ssim = StructuralSimilarityIndexMeasure( data_range = 1.0, kernel_size = kernel_size )
 
-    def forward( self, image, pred, target ):
-        l_berhu = berhu_loss( pred, target )
-        l_ews = edge_aware_smoothness_loss( pred, image )
-        l_si = scale_invariant_loss( pred, target )
-        l_ssim = ssim_loss( pred, target, self.ssim )
+        self._losses = [ "berhu", "edge_aware_smoothness", "scale_invariant", "ssim" ]
 
-        return self.lambda_berhu * l_berhu + self.lambda_ews * l_ews + self.lambda_si * l_si + self.lambda_ssim  * l_ssim
-    
+    def forward( self, pred, target ):
+        _losses = {
+            "berhu" : berhu_loss( pred, target ) * self.lambda_berhu,
+            "edge_aware_smoothness" : edge_aware_smoothness_loss( pred, target ) * self.lambda_ews,
+            "scale_invariant" : scale_invariant_loss( pred, target ) * self.lambda_si,
+            "ssim" : ssim_loss( pred, target, self.ssim ) * self.lambda_ssim
+        }
+
+        print( f"berhu : {_losses[ "berhu" ]:.4f}" )
+        print( f"edge_aware_smothness : {_losses[ "berhu" ]:.4f}" )
+        print( f"scale_invariant : {_losses[ "scale_invariant" ]:.4f}" )
+        print( f"ssim : {_losses[ "ssim" ]:.4f}" )
+
+        for k, v in _losses.items():
+            print( k, end = ' ' )
+            print( v.detach().item() )
+
+        print( sum( _losses.values() ).detach().item() )
+
+        return sum( _losses.values() ), _losses

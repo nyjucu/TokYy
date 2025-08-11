@@ -8,17 +8,11 @@ from torch.amp import autocast
 
 import torchvision.transforms as T
 
-import random
-
-from PIL import Image
-
 import os
 
 from tqdm import tqdm
 
 from typing import List
-
-import sys
 
 
 class Trainer():
@@ -35,8 +29,7 @@ class Trainer():
         self.scaler = scaler
 
         if type( scheduler ) == torch.optim.lr_scheduler.OneCycleLR:
-            log_message( LogType.ERROR, "One Cycle LR scheduler can only be assigned after calling load_dataset method" )
-            sys.exit( 1 )
+            log_message( LogType.ERROR, "One Cycle LR scheduler can only be assigned after calling load_dataset method", exit = True )
 
         self.scheduler = scheduler
 
@@ -44,7 +37,7 @@ class Trainer():
         self.metric = Metric( metrics = metrics, device = Trainer.device )
         
         self.checkpoint_path = checkpoint_path
-        self.checkpointer = Checkpointer.load( model = self.model, optimizer = self.optimizer, scaler = self.scaler, scheduler =self.scheduler, path = self.checkpoint_path ) if os.path.exists( checkpoint_path ) else Checkpointer( model, optimizer, scaler = scaler, scheduler = scheduler )
+        self.checkpointer = Checkpointer.load( model = self.model, optimizer = self.optimizer, scaler = self.scaler, scheduler =self.scheduler, path = self.checkpoint_path, criterion = self.criterion ) if os.path.exists( checkpoint_path ) else Checkpointer( model, optimizer, scaler = scaler, scheduler = scheduler, criterion = criterion )
         
         self.num_workers = 8
 
@@ -52,7 +45,7 @@ class Trainer():
         self.train_loader = None
         self.test_loader = None
 
-        self.accum_steps = 2
+        self.accum_steps = 1
         self.batch_size = 32
         self.max_epochs = 100
         self.epochs_per_session = 20
@@ -87,7 +80,7 @@ class Trainer():
                 return log_message( LogType.WARNING, "CUDA is not available. Device remains CPU" )
     
         else:
-            return log_message( LogType.WARNING, f"Provided device name not \'cpu\' or \'cuda\'. Device remains { self.device } ")
+            return log_message( LogType.WARNING, f"Provided device name is not \'cpu\' or \'cuda\'. Device remains { self.device } ")
 
 
     def set_model( self, model ):
@@ -102,7 +95,7 @@ class Trainer():
         can_begin = ask_yes_no( "Load dataset?" ) if Trainer.ask_before else True
 
         if not can_begin:
-            return log_message( LogType.NONE, "User input didn't allow dataset loading. Quittting...")
+            return log_message( LogType.NONE, "User input didn't allow dataset loading. Quittting...", exit = True )
 
         log_message( LogType.OK, "Dataset started loading")
 
@@ -129,18 +122,25 @@ class Trainer():
         can_begin = ask_yes_no( "Begin training?" ) if Trainer.ask_before else True
 
         if not can_begin:
-            return log_message( LogType.NONE, "User input didn't allow training. Quittting...")
+            return log_message( LogType.NONE, "User input didn't allow training. Quittting...", exit = True )
 
         if self.train_loader is None:
             return log_message( LogType.ERROR, "Training loader is empty. Quitting... " )
 
-        start_epoch = self.checkpointer.get_epoch( self.checkpoint_path )
+        start_epoch = self.checkpointer.epoch
 
         for epoch in range( start_epoch, min( start_epoch + self.epochs_per_session, self.max_epochs ) ):
             self.model.train()
 
             train_loss = torch.tensor( 0.0, device = self.device )
+
+            _losses_train, _losses_val = {}, {}
+            for key in self.criterion._losses:
+                _losses_train[ key ] = 0.0
+                _losses_val[ key ] = 0.0
+
             learning_rate = 0
+
             self.optimizer.zero_grad()
 
             loop = tqdm( enumerate( self.train_loader ), total = len( self.train_loader ), desc = f"Epoch { epoch + 1 } / { self.max_epochs }" )
@@ -151,10 +151,10 @@ class Trainer():
 
                 with autocast( device_type = self.device.type ):
                     output_data = self.model( input_data )
-                    loss = self.criterion( output_data, target ) / self.accum_steps
+                    loss, _losses = self.criterion( pred = output_data, target = target )
 
                 if torch.isfinite( loss) :
-                    self.scaler.scale( loss ).backward()
+                    self.scaler.scale( loss / self.accum_steps ).backward()
                 else:
                     log_message( LogType.WARNING, f"Skipping batch { i } due to invalid loss: { loss.item() }" )
                     continue
@@ -169,6 +169,9 @@ class Trainer():
 
                 train_loss += loss.detach() * input_data.size( 0 )
 
+                for key, val in _losses.items():
+                    _losses_train[ key ] += val.detach() * input_data.size( 0 )
+
                 loop.set_postfix( loss = loss.item() )
 
                 learning_rate += self.optimizer.param_groups[ 0 ][ 'lr' ]
@@ -180,27 +183,38 @@ class Trainer():
             val_loss = torch.tensor( 0.0, device = self.device )
 
             with torch.no_grad():
-                for input_data, target in self.test_loader:
+               for input_data, target in tqdm( self.test_loader, desc = "Validation" ):
                     input_data = input_data.to( self.device, non_blocking = Trainer.non_blocking )
                     target = target.to( self.device, non_blocking = Trainer.non_blocking )
 
                     with autocast( device_type = self.device.type ):
                         output_data = self.model( input_data )
-                        loss = self.criterion( output_data, target )
+                        loss, _losses = self.criterion( pred = output_data, target = target )
 
                         self.metric.compute_metrics( output_data, target, batch_size = self.batch_size )
 
                         val_loss += loss.detach() * input_data.size( 0 )
 
+                        for key, val in _losses.items():
+                            _losses_val[ key ] += val.detach() * input_data.size( 0 )
+
             train_loss = train_loss.item()
             val_loss = val_loss.item()
 
+            _losses_train = { k: v.item() / len( self.train_loader.dataset ) for k, v in _losses_train.items()}
+            _losses_val = { k: v.item() / len( self.train_loader.dataset ) for k, v in _losses_val.items()}
+
             losses = {
-                'train_loss' : train_loss / len( self.train_loader.dataset ),
-                'val_loss' : val_loss / len( self.test_loader.dataset )
+                'train' : train_loss / len( self.train_loader.dataset ),
+                'val' : val_loss / len( self.test_loader.dataset )
             }
 
-            log_message( LogType.NONE, f"Epoch [ {epoch + 1} / { self.max_epochs } ], Train Loss: {losses[ 'train_loss' ]:.4f}, Val Loss: {losses[ 'val_loss']:.4f}")
+            _losses = {
+                'train' : _losses_train,
+                'val' : _losses_val
+            }
+
+            log_message( LogType.NONE, f"Epoch [ {epoch + 1} / { self.max_epochs } ], Train Loss: {losses[ 'train' ]:.4f}, Val Loss: {losses[ 'val']:.4f}")
 
             self.checkpointer.update(
                 model = self.model,
@@ -212,6 +226,8 @@ class Trainer():
                 learning_rate = learning_rate / len( self.train_loader.dataset ),
 
                 losses = losses,
+                _losses = _losses,
+                
                 metrics = self.metric.computed
             )
 
