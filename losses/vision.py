@@ -134,3 +134,33 @@ class DepthLossV2( nn.Module ):
         print( sum( _losses.values() ).detach().item() )
 
         return sum( _losses.values() ), _losses
+
+
+class DepthLossV3( nn.Module ):
+    def __init__( self, lambda_berhu = 1.0, lambda_grad = 1.0, lambda_si = 1.0, lambda_ssim = 1.0, kernel_size = 5 ):
+        super().__init__()
+
+        self.lambda_berhu = lambda_berhu
+        self.lambda_grad = lambda_grad
+        self.lambda_si = lambda_si
+        self.lambda_ssim = lambda_ssim
+
+        self.ssim = StructuralSimilarityIndexMeasure( data_range = 1.0, kernel_size = kernel_size )
+
+        self._losses = [ "berhu", "gradient", "scale_invariant", "ssim" ]
+
+    def forward( self, pred, target ):
+        _losses = {
+            "berhu" : berhu_loss( pred, target ) * self.lambda_berhu,
+            "gradient" : gradient_loss( pred, target ) * self.lambda_grad,
+            "scale_invariant" : scale_invariant_loss( pred, target ) * self.lambda_si,
+            "ssim" : ssim_loss( pred, target, self.ssim ) * self.lambda_ssim
+        }
+
+        for k, v in _losses.items():
+            print( k, end = ' ' )
+            print( v.detach().item() )
+
+        print( sum( _losses.values() ).detach().item() )
+
+        return sum( _losses.values() ), _losses

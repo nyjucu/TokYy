@@ -54,6 +54,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
     parser.add_argument( "--no-ask-before", action = "store_true", help = "Disable confirmation prompts in Trainer")
+    parser.add_argument( "--no-scheduler", action = "store_true", help = "Don't use scheduler.")
 
     parser.add_argument( "--checkpoint-dir", type = Path, default = CHECKPOINTS_DIR, help = "Path to the checkpoint directory. Default at /checkpoints" )
     parser.add_argument( "--checkpoint-name", type = str, default = "default.pt", help = "Checkpoint file name." )

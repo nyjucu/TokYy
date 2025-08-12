@@ -202,7 +202,7 @@ class Trainer():
             val_loss = val_loss.item()
 
             _losses_train = { k: v.item() / len( self.train_loader.dataset ) for k, v in _losses_train.items()}
-            _losses_val = { k: v.item() / len( self.train_loader.dataset ) for k, v in _losses_val.items()}
+            _losses_val = { k: v.item() / len( self.test_loader.dataset ) for k, v in _losses_val.items()}
 
             losses = {
                 'train' : train_loss / len( self.train_loader.dataset ),
