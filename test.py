@@ -7,7 +7,7 @@ from tokyy.checkpointer import Checkpointer
 from tokyy.metrics import Metrics
 from tokyy import  LOSSES_DIR, METRICS_DIR, PREDICTS_DIR, OTHERS_DIR, LEARNING_RATES_DIR, _LOSSES_TRAIN_DIR, _LOSSES_TEST_DIR, _LOSSES_VAL_DIR
 from tokyy.augmentation import Resize, RandomCrop, RandomHorizontalFlip, ToTensor, ColorJitter, PairedCompose
-from tokyy.utils import parse_test_args
+from tokyy.utils import parse_plot_args
 from tokyy.losses.vision import DepthLossV2
 
 from torchvision import transforms as T
@@ -17,12 +17,10 @@ from torch.amp import GradScaler
 
 import matplotlib
 import matplotlib.pyplot as plt
-
-import h5py
+ 
 import numpy as np
 
-from PIL import Image
-from typing import Dict
+from typing import Dict, Tuple
 
 import os
 
@@ -31,8 +29,10 @@ matplotlib.use( 'TkAgg' )
 image_size = ( 128, 128 )
 device = torch.device( "cuda" if torch.cuda.is_available() else "cpu" )
 
+from tokyy.plotter import Plotter
 
-def load_model_and_checkpointer( model, checkpoint_path ) -> tuple:
+
+def load_model_and_checkpointer( model, checkpoint_path ) -> Tuple[ torch.nn.Module, Checkpointer ]:
     cp = Checkpointer.load(
         model = model,
         optimizer = torch.optim.Adam( model.parameters(), lr = 1e-4 ),
@@ -56,7 +56,7 @@ def load_model_and_checkpointer( model, checkpoint_path ) -> tuple:
     if cp is None:
         return ( None, None )
 
-    model = cp.model.to( device ) 
+    model = cp.model.to( torch.device( 'cpu' ) ) 
     model.eval()
 
     return ( model, cp )
@@ -158,218 +158,6 @@ def show():
             continue
 
 
-def predict( suffix : str, model : torch.nn.Module ):
-    predicts_path = PREDICTS_DIR / ( get_new_file_number( PREDICTS_DIR ) + "_predicts_" + suffix )
-
-    file_paths = [
-        r"/home/TokYy/DL_Datasets/nyu/test/01149.h5",
-        r"/home/TokYy/DL_Datasets/nyu/test/00002.h5",
-        r"/home/TokYy/DL_Datasets/nyu/test/00009.h5",
-        r"/home/TokYy/DL_Datasets/nyu/test/00169.h5",
-
-        r"/home/TokYy/DL_Datasets/nyu/train/bedroom_0051/00001.h5",
-        r"/home/TokYy/DL_Datasets/nyu/train/classroom_0003/00001.h5",
-        r"/home/TokYy/DL_Datasets/nyu/train/dining_room_0033/00001.h5",
-        r"/home/TokYy/DL_Datasets/nyu/train/office_0025/00001.h5",
-    ]
-
-    rgb_transform = T.Compose( [
-        T.ToTensor(),
-        T.Resize( image_size ),
-    ] )
-
-    depth_transform = T.Compose( [
-        T.ToTensor(),
-        T.Resize( image_size ),
-    ] )
-
-    n = len( file_paths )
-    _, axs = plt.subplots( n, 3, figsize = ( 12, 4 * n ) )
-    
-    for i, file_path in enumerate( file_paths ):            
-        with h5py.File( file_path, 'r' ) as f:
-            rgb = np.array( f[ 'rgb' ] )
-            depth = np.array( f[ 'depth' ] )
-
-        if rgb.shape[ 0 ] == 3:
-            rgb = np.transpose( rgb, ( 1, 2, 0 ) )
-
-        rgb_tensor = rgb_transform( rgb ).unsqueeze( 0 ).to( device )
-        depth_tensor = depth_transform( depth ).squeeze().cpu().numpy() / 10.0
-
-        with torch.no_grad():
-            pred = model( rgb_tensor )
-            pred = pred.squeeze().cpu().numpy() 
-
-        axs[ i ][ 0 ].imshow( rgb.astype( np.uint8 ) )
-        axs[ i ][ 0 ].set_title( f"RGB Image [{ i }]" )
-        axs[ i ][ 0 ].axis( "off" )
-
-        axs[ i ][ 1 ].imshow( depth_tensor, cmap = 'plasma' )
-        axs[ i ][ 1 ].set_title( "Ground Truth Depth" )
-        axs[ i ][ 1 ].axis( "off" )
-
-        axs[ i ][ 2 ].imshow(pred, cmap='plasma')
-        axs[ i ][ 2 ].set_title("Predicted Depth")
-        axs[ i ][ 2 ].axis("off")
-
-    plt.tight_layout()
-    plt.savefig( predicts_path )
-
-    log_message( LogType.OK, f"Preictions saved at { predicts_path }" )
-
-
-def plot_metrics( suffix : str, metrics : dict ):
-    metrics_path =  METRICS_DIR / ( get_new_file_number( METRICS_DIR ) + "_metrics_" + suffix)
-
-    plt.figure( figsize = ( 12, 6 ) )
-
-    for metric, values in metrics.items():
-        if isinstance(metric, Metrics):
-            cpu_values = [
-                x.detach().cpu().item() if torch.is_tensor( x ) else float( x )
-                for x in values
-            ]
-
-            plt.plot( cpu_values, label = metric.name )
-
-    plt.title( "Metrics Over Epochs" )
-    plt.xlabel( "Epoch" )
-    plt.ylabel( "Metric Value" )
-    plt.legend()
-    plt.grid( True )
-    plt.tight_layout()
-    plt.savefig( metrics_path )
-    plt.close()
-    
-    log_message( LogType.SUCCESS, f"Metrics graph saved to { metrics_path }" )
-
-
-def plot_losses( suffix : str, losses : dict ):
-    losses_path = LOSSES_DIR / ( get_new_file_number( LOSSES_DIR ) + "_losses_" + suffix )
-
-    plt.figure( figsize = ( 12, 6 ) )
-
-    for loss_type, values in losses.items():
-        cpu_values = [
-            x.detach().cpu().item() if torch.is_tensor(x) else float(x)
-            for x in values
-        ]
-
-        plt.plot( cpu_values, label=loss_type )
-
-    plt.title( "Training and Validation Loss Over Epochs" )
-    plt.xlabel( "Epoch" )
-    plt.ylabel( "Loss" )
-    plt.legend()
-    plt.grid( True )
-    plt.tight_layout()
-    plt.savefig( losses_path )
-    plt.close()
-
-    log_message( LogType.SUCCESS, f"Losses graph saved to { losses_path }" )
-
-
-def plot__losses( suffix : str, _losses : dict, sets : list = [ 'train', 'val', 'test' ] ):
-    set_to_path = {
-        "train" : _LOSSES_TRAIN_DIR / ( get_new_file_number( _LOSSES_TRAIN_DIR ) + "__losses_train_" + suffix ),
-        "test" :  _LOSSES_TEST_DIR / ( get_new_file_number( _LOSSES_TEST_DIR ) + "__losses_test_" + suffix ),
-        "val" : _LOSSES_VAL_DIR / ( get_new_file_number( _LOSSES_VAL_DIR ) + "__losses_val_" + suffix )
-    }
-
-    for set in sets:
-        plt.figure( figsize = ( 12, 6 ) )
-
-        for _losses_set, _losses_dict in _losses.items():
-            if _losses_set == set :
-                for loss, values in _losses_dict.items():
-                    cpu_values = [
-                        x.detach().cpu().item() if torch.is_tensor( x ) else float( x )
-                        for x in values
-                    ] 
-
-                    plt.plot( cpu_values, label = loss )
-
-        plt.title( f"Loss Over Epochs : { set }" )
-        plt.xlabel( "Epoch" )
-        plt.ylabel( "Loss Value" )
-        plt.legend()
-        plt.grid( True )
-        plt.tight_layout()
-        plt.savefig( set_to_path[ set ] )
-        plt.close()
-        
-        log_message( LogType.SUCCESS, f"_Losses graph saved to { set_to_path[ set ] }" )
-
-
-def plot_learning_rates( suffix : str, learning_rates : list ):
-    learning_rates_path = LEARNING_RATES_DIR / ( get_new_file_number( LEARNING_RATES_DIR ) + "_lr_" + suffix )
-
-    plt.figure( figsize = ( 12, 6 ) )
-
-    cpu_values = [
-        x.detach().cpu().item() if torch.is_tensor( x ) else float( x )
-        for x in learning_rates
-    ]
-
-    plt.plot( cpu_values, label = "learning rate" )
-
-    plt.title( "Learning Rate Over Epochs" )
-    plt.xlabel( "Epoch" )
-    plt.ylabel( "Learning Rate Value" )
-    plt.legend()
-    plt.grid( True )
-    plt.tight_layout()
-    plt.savefig( learning_rates_path )
-    plt.close()
-    
-    log_message( LogType.SUCCESS, f"Learning rates graph saved to { learning_rates_path }" )
-
-
-def graphs( suffix : str, checkpointer ):
-    plot_metrics( suffix, checkpointer.metrics )
-    plot_losses( suffix, checkpointer.losses )
-    plot__losses( suffix, checkpointer._losses )
-    plot_learning_rates( suffix, checkpointer.learning_rates )
-
-
-def one( suffix : str, model : torch.nn.Module, image_path = r'/home/TokYy/PyTorchProjects/TokYyStar/test2.png' ):
-    one_path = OTHERS_DIR / ( get_new_file_number( OTHERS_DIR ) + "_one_" + suffix )
-
-    img = Image.open( image_path ).convert( 'RGB' )
-
-    transform = T.Compose([
-        T.Resize( image_size ),  
-        T.ToTensor(),
-    ])
-
-    input_tensor = transform( img ).unsqueeze( 0 )
-
-    print( input_tensor.shape )
-
-    with torch.no_grad():
-        input_tensor = input_tensor.to( next( model.parameters() ).device ) 
-        output = model( input_tensor ) 
-
-    depth = output.squeeze().cpu().numpy()
-    depth_normalized = ( depth - depth.min() ) / ( depth.max() - depth.min() )
-
-    plt.figure( figsize = ( 10, 4 ) )
-
-    plt.subplot( 1, 2, 1 )
-    plt.imshow( img )
-    plt.title( 'Input Image' )
-    plt.axis( 'off' )
-
-    plt.subplot( 1, 2, 2 )
-    plt.imshow( depth_normalized, cmap = 'plasma' )  
-    plt.title( 'Predicted Depth' )
-    plt.axis( 'off' )
-
-    plt.tight_layout()
-    plt.savefig( one_path )
-
-
 def main():
     name_to_architecture = {
         "resunet" : ResUNet,
@@ -377,30 +165,32 @@ def main():
         "atrous" : AtrousResCBAMUNet
     }
 
-    args = parse_test_args()
+    args = parse_plot_args()
 
-    checkpont_name = os.path.splitext( args.checkpoint_name )[ 0 ]
+    suffix = os.path.splitext( args.checkpoint_name )[ 0 ]
 
-    model, checkpointer = load_model_and_checkpointer( name_to_architecture[ args.architecture ](), args.checkpoint_path )
+    if args.delete_by_number:
+        print( args.delete_by_number )
+        Plotter.delete_by_nubmer( args.delete_by_number )
 
-    if model == None and args.show:
-        show()
-        return 0
-    elif model == None and not args.show: 
-        return 0
+    if args.delete_by_suffix:
+        Plotter.delete_by_nubmer( args.delete_by_suffix )
 
-    actions : Dict[ callable, bool] = {
-        #batch( model = model ) : args.batch,
-        dataset : args.dataset,
-        predict( suffix = checkpont_name, model = model ) : args.predict,
-        graphs( suffix = checkpont_name, checkpointer = checkpointer ) : args.graphs,
-        one( suffix = checkpont_name, model = model ) : args.one,
-        show : args.show
+    model, checkpointer = load_model_and_checkpointer( name_to_architecture[ args.arch ](), args.checkpoint_path )
+
+    plotter = Plotter( model, checkpointer )
+
+    plot_actions : Dict[ callable, bool] = {
+        plotter.predict : args.pred or args.all,
+        plotter.plot__losses : args._loss or args.all,
+        plotter.plot_learning_rates : args.lr or args.all,
+        plotter.plot_metrics : args.metric or args.all,
+        plotter.plot_losses : args.loss or args.all,
     }
 
-    for act, flag_set in actions.items():
+    for act, flag_set in plot_actions.items():
         if flag_set:
-            act()
+            act( suffix )
 
 
 if __name__ == '__main__':

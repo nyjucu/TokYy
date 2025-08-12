@@ -79,7 +79,7 @@ class Checkpointer:
             return log_message( LogType.SUCCESS, f"Checkpoint saved at epoch { self.epoch + 1 } to { path }" )
         
         except: 
-            return log_message( LogType.ERROR, f"Checkpoint failed saving " )
+            return log_message( LogType.ERROR, f"Checkpoint failed saving ", exit = False )
 
 
     def update( 
@@ -178,7 +178,7 @@ class Checkpointer:
         """
 
         if not os.path.exists(path):
-            log_message( LogType.ERROR, "Checkpoint load path doesn't exist.")
+            log_message( LogType.ERROR, "Checkpoint load path doesn't exist.", exit = True )
             return None
     
         checkpoint = torch.load( path, map_location = map_loc, weights_only = False)
@@ -188,7 +188,7 @@ class Checkpointer:
         if 'model' in checkpoint and model:
             instance.model.load_state_dict( checkpoint[ 'model' ] )
         else:
-            log_message( LogType.ERROR, "Model not found in checkpoint" )
+            log_message( LogType.ERROR, "Model not found in checkpoint", exit = True )
             return None
 
         if 'optimizer' in checkpoint and optimizer:

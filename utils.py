@@ -86,20 +86,23 @@ def parse_args() -> argparse.Namespace:
 
     return args
 
-def parse_test_args() -> argparse.Namespace:
+def parse_plot_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
-    parser.add_argument( "--show", action = "store_true", default=False, help = "Traverse dataset." )
-    parser.add_argument( "--batch", action = "store_true", default=False, help = "Calculate max batch size on without raising OOM." )
-    parser.add_argument( "--dataset", action = "store_true", default=False, help = "Print dataset data." )
-    parser.add_argument( "--predict", action = "store_true", default=False, help = "Save 8 predictions and their ground truths." )
-    parser.add_argument( "--graphs", action = "store_true", default=False, help = "Print dataset data." )
-    parser.add_argument( "--one", action = "store_true", default=False, help = "Predict test.png" )
+    parser.add_argument( "--all", action = "store_true", help = "Plot all." )
+    parser.add_argument( "--lr", action = "store_true", help = "Plot learning rate." )
+    parser.add_argument( "--pred", action = "store_true", help = "Plot predictions." )
+    parser.add_argument( "--loss", action = "store_true", help = "Plot losses." )
+    parser.add_argument( "--_loss", action = "store_true", help = "Plot _losses." )
+    parser.add_argument( "--metric", action = "store_true", help = "Plot metrics." )
+
+    parser.add_argument( "--delete-by-number", type = str, default = "pula", help = "Delete plots by number." )
+    parser.add_argument( "--delete-by-suffix", type = str, default = "pizda", help = "Delete plots by suffix." )
 
     parser.add_argument( "--checkpoint-dir", type = Path, default = CHECKPOINTS_DIR, help = "Path to the checkpoint directory. Default at /checkpoints" )
-    parser.add_argument( "--checkpoint-name", type = str, default = "default", help = "Checkpoint file name." )
+    parser.add_argument( "--checkpoint-name", type = str, default = "default.pt", help = "Checkpoint file name." )
 
-    parser.add_argument( "--architecture", type = str, default = "resunet", help = "Architecture of the model to train [resunet, cbam, atrous]." )
+    parser.add_argument( "--arch", type = str, default = "cbam", help = "Architecture of the model to train [resunet, cbam, atrous]." )
 
     args = parser.parse_args()
 
