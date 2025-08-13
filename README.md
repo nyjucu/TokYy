@@ -38,15 +38,17 @@ Terminal integration:
 
 ## Plotting model analytics
 
-> Inside `DIR/tokyy/rezults` are multiple subdirs where running `tokyyplot` saves models analytics.
+> Inside `DIR/tokyy/results` are multiple subdirs where running `tokyyplot` saves models analytics.
 
 `tokyyplot` arguments:
 
 > `--checkpoint-dir` sets the checkpoint loading directory. Defaults to `DIR/tokyy/checkpoints`. <br>
 > `--checkpont-name` sets the checkpoint loading name. <br>
-> `--loss` saves train, validation, and test losses across all epochs. <br>
-> `--_loss` saves the sub-losses that sum up to the final one inside `test`, `val`, and `traing` subdirs of `DIR/tokyy/rezults/_losses` <br>
->
+> `--loss` saves train, validation, and test losses across all epochs inside `results/losses`. <br>
+> `--_loss` saves the sub-losses that sum up to the final one inside `test`, `val`, and `traing` subdirs of `results/_losses` <br>
+> `--metric` saves the metrics inside `results/metrics` <br>
+> `--lr` saves the learning rate inside `results/learning_rates`. Useful when using a scheduler. <br>
+> `--pred` (if NYU-Depth-V2) is installed locally) saves eight predictions with input, prediction, and ground truth. Helpful for comparing multiple models on same eight predictions. <br>
 
 
 
