@@ -16,4 +16,9 @@ Libraries required:
 
 Terminal integration:
 
-> On linux, type 
+> On linux, open the shell configuration folder (e.g., if `$SHELL` outputs `bin/bash`, open `~/.bashrc`), and add the following two lines. < br >
+> `alias tokyystar = "$path/to/tokyy/tokyystar` < br >
+> `alias tokyystar = "$path/to/tokyy/tokyyplot` < br >
+
+## Training a model using CLI
+
