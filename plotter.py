@@ -10,6 +10,8 @@ from torchvision import transforms as T
 
 import h5py
 
+import plotly.graph_objects as go
+
 import matplotlib.pyplot as plt
 
 from PIL import Image
@@ -53,84 +55,99 @@ class Plotter():
 
 
     def plot_losses( self, suffix : str ):
-        losses_path = LOSSES_DIR / ( get_new_file_number( LOSSES_DIR ) + "_losses_" + suffix )
+        losses_path = LOSSES_DIR / ( get_new_file_number( LOSSES_DIR ) + "_losses_" + suffix + ".html" )
 
-        plt.figure( figsize = ( 12, 6 ) )
+        fig = go.Figure()
 
         for loss_type, values in self.losses.items():
             cpu_values = [
-                x.detach().cpu().item() if torch.is_tensor(x) else float(x)
+                x.detach().cpu().item() if torch.is_tensor( x ) else float( x )
                 for x in values
             ]
 
-            plt.plot( cpu_values, label = loss_type )
+            fig.add_trace( go.Scatter(
+                y = cpu_values,
+                mode = 'lines+markers',
+                name = loss_type
+            ))
 
-        plt.title( "Training and Validation Loss Over Epochs" )
-        plt.xlabel( "Epoch" )
-        plt.ylabel( "Loss" )
-        plt.legend()
-        plt.grid( True )
-        plt.tight_layout()
-        plt.savefig( losses_path )
-        plt.close()
+        fig.update_layout(
+            title = "Training and Validation Loss Over Epochs",
+            xaxis_title = "Epoch",
+            yaxis_title = "Loss",
+            hovermode = "x unified"
+        )
 
-        log_message( LogType.SUCCESS, f"Losses graph saved to { losses_path }" )
+        fig.write_html( str( losses_path ) )
+
+        log_message( LogType.SUCCESS, f"Interactive losses graph saved to { losses_path }" )
 
 
     def plot__losses( self, suffix : str ):
         set_to_path = {
-            "train" : _LOSSES_TRAIN_DIR / ( get_new_file_number( _LOSSES_TRAIN_DIR ) + "__losses_train_" + suffix ),
-            "test" :  _LOSSES_TEST_DIR / ( get_new_file_number( _LOSSES_TEST_DIR ) + "__losses_test_" + suffix ),
-            "val" : _LOSSES_VAL_DIR / ( get_new_file_number( _LOSSES_VAL_DIR ) + "__losses_val_" + suffix )
+            "train" : _LOSSES_TRAIN_DIR / ( get_new_file_number( _LOSSES_TRAIN_DIR ) + "__losses_train_" + suffix + ".html" ),
+            "test" :  _LOSSES_TEST_DIR / ( get_new_file_number( _LOSSES_TEST_DIR ) + "__losses_test_" + suffix + ".html" ),
+            "val" : _LOSSES_VAL_DIR / ( get_new_file_number( _LOSSES_VAL_DIR ) + "__losses_val_" + suffix + ".html" )
         }
 
         for set in self.sets:
-            plt.figure( figsize = ( 12, 6 ) )
+            fig = go.Figure()
 
             for _losses_set, _losses_dict in self._losses.items():
-                if _losses_set == set :
+                if _losses_set == set:
                     for loss, values in _losses_dict.items():
                         cpu_values = [
                             x.detach().cpu().item() if torch.is_tensor( x ) else float( x )
                             for x in values
-                        ] 
+                        ]
 
-                        plt.plot( cpu_values, label = loss )
+                        fig.add_trace( go.Scatter(
+                            y = cpu_values,
+                            mode = 'lines+markers',
+                            name = loss
+                        ) )
 
-            plt.title( f"Loss Over Epochs : { set }" )
-            plt.xlabel( "Epoch" )
-            plt.ylabel( "Loss Value" )
-            plt.legend()
-            plt.grid( True )
-            plt.tight_layout()
-            plt.savefig( set_to_path[ set ] )
-            plt.close()
-            
-            log_message( LogType.SUCCESS, f"_Losses graph saved to { set_to_path[ set ] }" )
+            fig.update_layout(
+                title = f"Loss Over Epochs : { set }",
+                xaxis_title = "Epoch",
+                yaxis_title = "Loss",
+                hovermode = "x unified"
+            )
+
+            fig.write_html( str( set_to_path[ set ] ) )
+
+            log_message(LogType.SUCCESS, f"Losses graph saved to { set_to_path[ set ] }")
 
 
     def plot_learning_rates( self, suffix : str ):
-        learning_rates_path = LEARNING_RATES_DIR / ( get_new_file_number( LEARNING_RATES_DIR ) + "_lr_" + suffix )
+        learning_rates_path = LEARNING_RATES_DIR / ( get_new_file_number( LEARNING_RATES_DIR ) + "_lr_" + suffix + ".html" )
 
-        plt.figure( figsize = ( 12, 6 ) )
+        fig = go.Figure()
 
         cpu_values = [
             x.detach().cpu().item() if torch.is_tensor( x ) else float( x )
             for x in self.learning_rates
         ]
 
-        plt.plot( cpu_values, label = "learning rate" )
+        fig = go.Figure()
 
-        plt.title( "Learning Rate Over Epochs" )
-        plt.xlabel( "Epoch" )
-        plt.ylabel( "Learning Rate Value" )
-        plt.legend()
-        plt.grid( True )
-        plt.tight_layout()
-        plt.savefig( learning_rates_path )
-        plt.close()
-        
-        log_message( LogType.SUCCESS, f"Learning rates graph saved to { learning_rates_path }" )
+        fig.add_trace( go.Scatter(
+            y = cpu_values,
+            mode = 'lines+markers',
+            name = "Learning Rate"
+        ))
+
+        fig.update_layout(
+            title = "Learning Rate Over Epochs",
+            xaxis_title = "Epoch",
+            yaxis_title = "Learning Rate Value",
+            hovermode = "x unified"
+        )
+
+        fig.write_html( str( learning_rates_path) )
+
+        log_message( LogType.SUCCESS, f"Interactive learning rates graph saved to { learning_rates_path }.html" )
+
 
     def predict( self, suffix : str ):
         predicts_path = PREDICTS_DIR / ( get_new_file_number( PREDICTS_DIR ) + "_predicts_" + suffix )
@@ -168,7 +185,7 @@ class Plotter():
             if rgb.shape[ 0 ] == 3:
                 rgb = np.transpose( rgb, ( 1, 2, 0 ) )
 
-            rgb_tensor = rgb_transform( rgb ).unsqueeze( 0 ).to( torch.device( 'cuda' ) )
+            rgb_tensor = rgb_transform( rgb ).unsqueeze( 0 ).to( torch.device( 'cpu' ) )
             depth_tensor = depth_transform( depth ).squeeze().cpu().numpy() / 10.0
 
             with torch.no_grad():
@@ -253,6 +270,7 @@ class Plotter():
 
         for dir in dirs:
             for file in dir.iterdir():
+                print( file.stem[ - len( suffix ) : ] )
                 if file.is_file() and file.stem[ - len( suffix ) : ] == suffix:
                     file.unlink()
                     n_found += 1

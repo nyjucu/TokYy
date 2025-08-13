@@ -50,6 +50,25 @@ class RandomCrop:
         return rgb, depth
 
 
+class RandomRotationByAngle:
+    def __init__( self, angle_range = ( -20, 20 ) ):  
+        self.angle_range = angle_range
+
+    def __call__(self, rgb, depth):
+        angle = random.uniform( self.angle_range[ 0 ], self.angle_range[ 1 ] )
+
+        h, w = rgb.shape[ : 2 ]
+        center = ( w // 2, h // 2 )
+
+        M = cv2.getRotationMatrix2D( center, angle, scale = 1.0 )
+
+        rgb_rot = cv2.warpAffine( rgb, M, ( w, h ), flags = cv2.INTER_LINEAR, borderMode = cv2.BORDER_REFLECT_101 )
+
+        depth_rot = cv2.warpAffine( depth, M, ( w, h ), flags = cv2.INTER_NEAREST, borderMode = cv2.BORDER_REFLECT_101 )
+
+        return rgb_rot, depth_rot
+
+
 class ToTensor:
     def __call__( self, rgb, depth ):
         rgb = torch.from_numpy( rgb.transpose( 2, 0, 1 ) ).float() / 255.0

@@ -62,6 +62,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument( "--image-size", nargs = 2, type = int, default = [ 128, 128 ], help = "Image size (height width).")
     parser.add_argument( "--batch-size", type = int, default = 32, help = "Training batch size." )
     parser.add_argument( "--accum-steps", type = int, default = 1, help = "Gradient accumulation steps." )
+    parser.add_argument( "--max-epochs", type = int, default = 5, help = "Training maximum epochs." )
 
     parser.add_argument( "--architecture", type = str, default = "cbam", help = "Architecture of the model to train [resunet, cbam, atrous]." )
 
@@ -70,7 +71,7 @@ def parse_args() -> argparse.Namespace:
     args.checkpoint_path = args.checkpoint_dir / args.checkpoint_name
     log_message( LogType.NONE, f"Checkpoint absolute path is { args.checkpoint_path }" )
     name_to_architecture = {
-        "resunet" : "ResUNet",
+        "unet" : "ResUNet",
         "cbam" : "ResCBAMUNet",
         "atrous" : "AtrousResCBAMUNet"
     }
@@ -96,11 +97,11 @@ def parse_plot_args() -> argparse.Namespace:
     parser.add_argument( "--_loss", action = "store_true", help = "Plot _losses." )
     parser.add_argument( "--metric", action = "store_true", help = "Plot metrics." )
 
-    parser.add_argument( "--delete-by-number", type = str, default = "pula", help = "Delete plots by number." )
-    parser.add_argument( "--delete-by-suffix", type = str, default = "pizda", help = "Delete plots by suffix." )
+    parser.add_argument( "--delete-by-number", type = str, help = "Delete plots by number." )
+    parser.add_argument( "--delete-by-suffix", type = str, help = "Delete plots by suffix." )
 
     parser.add_argument( "--checkpoint-dir", type = Path, default = CHECKPOINTS_DIR, help = "Path to the checkpoint directory. Default at /checkpoints" )
-    parser.add_argument( "--checkpoint-name", type = str, default = "default.pt", help = "Checkpoint file name." )
+    parser.add_argument( "--checkpoint-name", type = str, default = "sicucoaiele.pt", help = "Checkpoint file name." )
 
     parser.add_argument( "--arch", type = str, default = "cbam", help = "Architecture of the model to train [resunet, cbam, atrous]." )
 

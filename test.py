@@ -6,7 +6,7 @@ from tokyy.datasets.vision import NyuDepthV2
 from tokyy.checkpointer import Checkpointer
 from tokyy.metrics import Metrics
 from tokyy import  LOSSES_DIR, METRICS_DIR, PREDICTS_DIR, OTHERS_DIR, LEARNING_RATES_DIR, _LOSSES_TRAIN_DIR, _LOSSES_TEST_DIR, _LOSSES_VAL_DIR
-from tokyy.augmentation import Resize, RandomCrop, RandomHorizontalFlip, ToTensor, ColorJitter, PairedCompose
+from tokyy.augmentation import Resize, RandomCrop, RandomHorizontalFlip, ToTensor, ColorJitter, PairedCompose, RandomRotationByAngle
 from tokyy.utils import parse_plot_args
 from tokyy.losses.vision import DepthLossV2
 
@@ -142,7 +142,8 @@ def show_one_sample( rgb_tensor, depth_tensor ):
 
 def show():
     paired_transform = PairedCompose([
-        Resize( ( 144, 192 ) ), 
+        Resize( ( 144, 192 ) ),
+        RandomRotationByAngle(),
         RandomHorizontalFlip(),
         RandomCrop( ( 128, 128 ) ),
         ColorJitter(),
@@ -169,12 +170,11 @@ def main():
 
     suffix = os.path.splitext( args.checkpoint_name )[ 0 ]
 
-    if args.delete_by_number:
-        print( args.delete_by_number )
+    if args.delete_by_number is not None:
         Plotter.delete_by_nubmer( args.delete_by_number )
 
-    if args.delete_by_suffix:
-        Plotter.delete_by_nubmer( args.delete_by_suffix )
+    if args.delete_by_suffix is not None:
+        Plotter.delete_by_suffix( args.delete_by_suffix )
 
     model, checkpointer = load_model_and_checkpointer( name_to_architecture[ args.arch ](), args.checkpoint_path )
 
