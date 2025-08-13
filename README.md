@@ -53,8 +53,8 @@ Terminal integration:
 > `--metric` saves the metrics inside `results/metrics` <br>
 > `--lr` saves the learning rate inside `results/learning_rates`. Useful when using a scheduler. <br>
 > `--arch` sets the architecture. Defaults to `cbam` which is a U-Net With Residual Blocks and CBAM. <br>
-> `--delete-by-number` deletes all plots from `results` starting with the passed number (e.g., `02` deletes `02_losses_default.html`). 
-> `--delete-by-suffix` deletes all plots from `results` starting with the passed number (e.g., `default` deletes `02_losses_default.html`). 
+> `--delete-by-number` deletes all plots from `results` starting with the passed number (e.g., `02` deletes `02_losses_default.html`). <br>
+> `--delete-by-suffix` deletes all plots from `results` starting with the passed number (e.g., `default` deletes `02_losses_default.html`). <br>
 
 
 
