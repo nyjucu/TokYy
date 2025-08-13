@@ -17,8 +17,12 @@ Libraries required:
 Terminal integration:
 
 > On linux, open the shell configuration folder (e.g., if `$SHELL` outputs `bin/bash`, open `~/.bashrc`), and add the following two lines. <br>
-> `alias tokyystar = "$path/to/tokyy/tokyystar` <br>
-> `alias tokyystar = "$path/to/tokyy/tokyyplot` <br>
+```
+`alias tokyystar = "$path/to/tokyy/tokyystar`
+```
+```
+`alias tokyystar = "$path/to/tokyy/tokyyplot`
+```
 
 ## Training a model using CLI
 
@@ -48,7 +52,6 @@ Terminal integration:
 > `--_loss` saves the sub-losses that sum up to the final one inside `test`, `val`, and `traing` subdirs of `results/_losses` <br>
 > `--metric` saves the metrics inside `results/metrics` <br>
 > `--lr` saves the learning rate inside `results/learning_rates`. Useful when using a scheduler. <br>
-> `--pred` (if NYU-Depth-V2) is installed locally) saves eight predictions with input, prediction, and ground truth. Helpful for comparing multiple models on same eight predictions. <br>
 > `--arch` sets the architecture. Defaults to `cbam` which is a U-Net With Residual Blocks and CBAM. <br>
 > `--delete-by-number` deletes all plots from `results` starting with the passed number (e.g., `02` deletes `02_losses_default.html`). 
 > `--delete-by-suffix` deletes all plots from `results` starting with the passed number (e.g., `default` deletes `02_losses_default.html`). 
