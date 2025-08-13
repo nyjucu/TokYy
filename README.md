@@ -22,3 +22,42 @@ Terminal integration:
 
 ## Training a model using CLI
 
+> Create a directory `DIR` and move `tokyY` inside. Now any any extra file inide `DIR` can be run using the commnad `tokyystar`.
+
+`tokyystar` arguments:
+
+> First argument should aslways be the name (without .py extension) of the file to run inside `DIR`. <br>
+> `-h` for description of the rest of the arguments.
+> `--checkpoint-dir` sets the checkpoint saving directory. Defaults to `DIR/tokyy/checkpoints`. <br>
+> `--checkpont-name` sets the checkpoint saving name. Defaults to `default.pt`. Recommended to use `.pt`, `.pth,` or `.ckpt` as extension. <br>
+> `--arch` sets the architecture. Defaults to `cbam` which is a U-Net With Residual Blocks and CBAM. <br>
+> `--no-ask-before` disables required user input before loading the dataset and starting the training. <br>
+> `--batch-size`
+> `--input-image` for vision models. Takes two integers separated by space.
+> `--accum-steps` sets accumulation steps.
+
+## Plotting model analytics
+
+> Inside `DIR/tokyy/rezults` are multiple subdirs where running `tokyyplot` saves models analytics.
+
+`tokyyplot` arguments:
+
+> `--checkpoint-dir` sets the checkpoint loading directory. Defaults to `DIR/tokyy/checkpoints`. <br>
+> `--checkpont-name` sets the checkpoint loading name. <br>
+> `--loss` saves train, validation, and test losses across all epochs. <br>
+> `--_loss` saves the sub-losses that sum up to the final one inside `test`, `val`, and `traing` subdirs of `DIR/tokyy/rezults/_losses` <br>
+>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
