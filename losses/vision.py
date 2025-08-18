@@ -79,7 +79,7 @@ def scale_invariant_loss( pred, target, epsilon = 1e-6, mask = None ):
     return loss
 
 
-class DepthLoss( nn.Module ):
+class DepthLossV1( nn.Module ):
     def __init__( self, lambda_depth = 0.1, lambda_grad = 1.0, lambda_ssim = 1.0, kernel_size = 5 ):
         super().__init__()
 
@@ -94,7 +94,7 @@ class DepthLoss( nn.Module ):
     def forward( self, pred, target ):
         _losses = {
             "depth" : depth_loss( pred, target ) * self.lambda_depth,
-            "gradient" : gradient_loss( pred, target ) * self.labda_grad,
+            "gradient" : gradient_loss( pred, target ) * self.lambda_grad,
             "ssim" : ssim_loss( pred, target, self.ssim ) * self.lambda_ssim
         }
 
@@ -121,17 +121,12 @@ class DepthLossV2( nn.Module ):
             "scale_invariant" : scale_invariant_loss( pred, target ) * self.lambda_si,
             "ssim" : ssim_loss( pred, target, self.ssim ) * self.lambda_ssim
         }
+        
+        # for k, v in _losses.items():
+        #     print( k, end = ' ' )
+        #     print( v.detach().item() )
 
-        print( f"berhu : {_losses[ "berhu" ]:.4f}" )
-        print( f"edge_aware_smothness : {_losses[ "berhu" ]:.4f}" )
-        print( f"scale_invariant : {_losses[ "scale_invariant" ]:.4f}" )
-        print( f"ssim : {_losses[ "ssim" ]:.4f}" )
-
-        for k, v in _losses.items():
-            print( k, end = ' ' )
-            print( v.detach().item() )
-
-        print( sum( _losses.values() ).detach().item() )
+        # print( sum( _losses.values() ).detach().item() )
 
         return sum( _losses.values() ), _losses
 
@@ -157,10 +152,10 @@ class DepthLossV3( nn.Module ):
             "ssim" : ssim_loss( pred, target, self.ssim ) * self.lambda_ssim
         }
 
-        for k, v in _losses.items():
-            print( k, end = ' ' )
-            print( v.detach().item() )
+        # for k, v in _losses.items():
+        #     print( k, end = ' ' )
+        #     print( v.detach().item() )
 
-        print( sum( _losses.values() ).detach().item() )
+        # print( sum( _losses.values() ).detach().item() )
 
         return sum( _losses.values() ), _losses

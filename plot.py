@@ -5,7 +5,6 @@ import tokyy.datasets.vision
 from tokyy.datasets.vision import NyuDepthV2 
 from tokyy.checkpointer import Checkpointer
 from tokyy.metrics import Metrics
-from tokyy import  LOSSES_DIR, METRICS_DIR, PREDICTS_DIR, OTHERS_DIR, LEARNING_RATES_DIR, _LOSSES_TRAIN_DIR, _LOSSES_TEST_DIR, _LOSSES_VAL_DIR
 from tokyy.augmentation import Resize, RandomCrop, RandomHorizontalFlip, ToTensor, ColorJitter, PairedCompose, RandomRotationByAngle
 from tokyy.utils import parse_plot_args
 from tokyy.losses.vision import DepthLossV2
@@ -14,6 +13,7 @@ from torchvision import transforms as T
 import torch
 from torch.utils.data import DataLoader
 from torch.amp import GradScaler
+from torchinfo import summary
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -130,7 +130,7 @@ def show_one_sample( rgb_tensor, depth_tensor ):
     plt.clf()
     plt.subplot( 1, 2, 1)
     plt.title( "RGB Image" )
-    plt.imshow( rgb_img )  
+    plt.imshow( rgb_img )
     plt.axis( 'off' )
 
     plt.subplot( 1, 2, 2 )
@@ -186,6 +186,7 @@ def main():
         plotter.plot_learning_rates : args.lr or args.all,
         plotter.plot_metrics : args.metric or args.all,
         plotter.plot_losses : args.loss or args.all,
+        plotter.plot_grad_norms : args.norm or args.all
     }
 
     for act, flag_set in plot_actions.items():

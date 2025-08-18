@@ -25,7 +25,10 @@ def ask_yes_no( question ):
             print( "Invalid command." )
 
 
-def log_message( type, msj = '', exit = False ):
+def log_message( type, msj = '', exit = False, log = True ):
+    if not log:
+        return LogType.OK
+
     if type == LogType.ERROR:
         print( '\033[31m[  ERROR  ]\033[0m', end = ' ' )
 
@@ -96,6 +99,7 @@ def parse_plot_args() -> argparse.Namespace:
     parser.add_argument( "--loss", action = "store_true", help = "Plot losses." )
     parser.add_argument( "--_loss", action = "store_true", help = "Plot _losses." )
     parser.add_argument( "--metric", action = "store_true", help = "Plot metrics." )
+    parser.add_argument( "--norm", action = "store_true", help = "Plot gradient norms." )
 
     parser.add_argument( "--delete-by-number", type = str, help = "Delete plots by number." )
     parser.add_argument( "--delete-by-suffix", type = str, help = "Delete plots by suffix." )

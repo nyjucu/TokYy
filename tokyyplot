@@ -4,4 +4,4 @@ script_dir="$(cd "$(dirname "$0")" && pwd)"
 package_root="$(dirname "$script_dir")"
 
 cd "$package_root" || exit 1
-/home/TokYy/Venv/PyTorch/bin/python -m "tokyy.test" "${@:1}"
+/home/TokYy/Venv/PyTorch/bin/python -m "tokyy.plot" "${@:1}"

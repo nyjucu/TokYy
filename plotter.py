@@ -1,7 +1,7 @@
 from tokyy.utils import LogType, log_message, get_new_file_number
 from tokyy.checkpointer import Checkpointer
 from tokyy.metrics import Metrics
-from tokyy import  LOSSES_DIR, METRICS_DIR, LEARNING_RATES_DIR, _LOSSES_TRAIN_DIR, _LOSSES_TEST_DIR, _LOSSES_VAL_DIR, OTHERS_DIR, PREDICTS_DIR
+from tokyy import  LOSSES_DIR, METRICS_DIR, LEARNING_RATES_DIR, _LOSSES_TRAIN_DIR, _LOSSES_TEST_DIR, _LOSSES_VAL_DIR, OTHERS_DIR, PREDICTS_DIR, GRAD_DIR
 
 import numpy as np
 
@@ -25,6 +25,7 @@ class Plotter():
         self.losses = checkpointer.losses
         self._losses = checkpointer._losses
         self.learning_rates = checkpointer.learning_rates
+        self.grad_norms = checkpointer.grad_norms
         self.sets = [ 'train', 'val', 'test' ]
 
 
@@ -80,7 +81,7 @@ class Plotter():
 
         fig.write_html( str( losses_path ) )
 
-        log_message( LogType.SUCCESS, f"Interactive losses graph saved to { losses_path }" )
+        log_message( LogType.SUCCESS, f"Losses graph saved to { losses_path }" )
 
 
     def plot__losses( self, suffix : str ):
@@ -140,13 +141,43 @@ class Plotter():
         fig.update_layout(
             title = "Learning Rate Over Epochs",
             xaxis_title = "Epoch",
-            yaxis_title = "Learning Rate Value",
+            yaxis_title = "Learning Rate",
             hovermode = "x unified"
         )
 
         fig.write_html( str( learning_rates_path) )
 
-        log_message( LogType.SUCCESS, f"Interactive learning rates graph saved to { learning_rates_path }.html" )
+        log_message( LogType.SUCCESS, f"Learning rates graph saved to { learning_rates_path }.html" )
+
+
+    def plot_grad_norms( self, suffix : str ):
+        grad_norms_path = GRAD_DIR / ( get_new_file_number( GRAD_DIR ) + "_gn_" + suffix + ".html" )
+
+        fig = go.Figure()
+
+        cpu_values = [
+            x.detach().cpu().item() if torch.is_tensor( x ) else float( x )
+            for x in self.grad_norms
+        ]
+
+        fig = go.Figure()
+
+        fig.add_trace( go.Scatter(
+            y = cpu_values,
+            mode = 'lines+markers',
+            name = "Grad norm"
+        ))
+
+        fig.update_layout(
+            title = "Learning Rate Over Batches",
+            xaxis_title = "Batch",
+            yaxis_title = "Grad norm",
+            hovermode = "x unified"
+        )
+
+        fig.write_html( str( grad_norms_path) )
+
+        log_message( LogType.SUCCESS, f"Gradient nomrs rates graph saved to { grad_norms_path }.html" )
 
 
     def predict( self, suffix : str ):

@@ -15,6 +15,7 @@ METRICS_DIR = RESULTS_DIR / "metrics"
 LEARNING_RATES_DIR = RESULTS_DIR / "learning_rates"
 PREDICTS_DIR = RESULTS_DIR / "predicts"
 OTHERS_DIR = RESULTS_DIR / "others"
+GRAD_DIR = RESULTS_DIR / "grad"
 
 CHECKPOINTS_DIR.mkdir( parents = True, exist_ok = True)
 RESULTS_DIR.mkdir( parents = True, exist_ok = True)
@@ -27,3 +28,4 @@ _LOSSES_TRAIN_DIR.mkdir( parents = True, exist_ok = True)
 LEARNING_RATES_DIR.mkdir( parents = True, exist_ok = True)
 PREDICTS_DIR.mkdir( parents = True, exist_ok = True)
 OTHERS_DIR.mkdir( parents = True, exist_ok = True)
+GRAD_DIR.mkdir( parents = True, exist_ok = True)

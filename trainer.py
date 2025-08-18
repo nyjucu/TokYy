@@ -125,22 +125,26 @@ class Trainer():
             return log_message( LogType.NONE, "User input didn't allow training. Quittting...", exit = True )
 
         if self.train_loader is None:
-            return log_message( LogType.ERROR, "Training loader is empty. Quitting... " )
+            return log_message( LogType.ERROR, "Training loader is empty. Quitting... ", exit = True )
 
         start_epoch = self.checkpointer.epoch
+
+        grad_norm = []
 
         for epoch in range( start_epoch, min( start_epoch + self.epochs_per_session, self.max_epochs ) ):
             self.model.train()
 
             train_loss = torch.tensor( 0.0, device = self.device )
-
+            val_loss = torch.tensor( 0.0, device = self.device )
+        
             _losses_train, _losses_val = {}, {}
+            
             for key in self.criterion._losses:
                 _losses_train[ key ] = 0.0
                 _losses_val[ key ] = 0.0
 
-            learning_rate = 0
-
+            learning_rate = 0.0
+        
             self.optimizer.zero_grad()
 
             loop = tqdm( enumerate( self.train_loader ), total = len( self.train_loader ), desc = f"Epoch { epoch + 1 } / { self.max_epochs }" )
@@ -154,12 +158,23 @@ class Trainer():
                     loss, _losses = self.criterion( pred = output_data, target = target )
 
                 if torch.isfinite( loss) :
-                    self.scaler.scale( loss / self.accum_steps ).backward()
+                    if self.scaler:
+                        self.scaler.scale( loss / self.accum_steps ).backward()
+                    else:
+                        ( loss / self.accum_steps ).backward()
                 else:
                     log_message( LogType.WARNING, f"Skipping batch { i } due to invalid loss: { loss.item() }" )
                     continue
 
                 if ( i + 1 ) % self.accum_steps == 0 or ( i + 1 ) == len( self.train_loader ):
+                    self.scaler.unscale_( self.optimizer )
+
+                    # torch.nn.utils.clip_grad_norm_( self.model.parameters(), max_norm = 1.0 )
+
+                    grad_norm.append( self.get_grad_norm().item() )
+
+                    print( grad_norm[ - 1 ] )
+                    
                     self.scaler.step( self.optimizer )
                     self.scaler.update()
                     self.optimizer.zero_grad()
@@ -179,8 +194,6 @@ class Trainer():
             log_message( LogType.OK, "Training completed. Evaluating on validation set..." )
 
             self.model.eval()
-
-            val_loss = torch.tensor( 0.0, device = self.device )
 
             with torch.no_grad():
                for input_data, target in tqdm( self.test_loader, desc = "Validation" ):
@@ -224,6 +237,7 @@ class Trainer():
 
                 epoch = epoch,
                 learning_rate = learning_rate / len( self.train_loader.dataset ),
+                grad_norm = grad_norm, 
 
                 losses = losses,
                 _losses = _losses,
@@ -233,15 +247,22 @@ class Trainer():
 
             self.checkpointer.save( self.checkpoint_path )
 
+            print( self.checkpointer.grad_norms )
+
             log_message( LogType.SUCCESS, f"Model trained for { epoch + 1 } epoch[s]" )
+
+
+    def get_grad_norm( self ):
+        return torch.norm(
+            torch.stack( [
+                torch.norm( p.grad.detach(), 2 )
+                for p in self.model.parameters() if p.grad is not None
+            ] ),
+            2
+        )
 
 
     @staticmethod
     def clear_cache():
         gc.collect()
         torch.cuda.empty_cache()
-
-    
-    def data_augmentation( self ):
-        pass
-    

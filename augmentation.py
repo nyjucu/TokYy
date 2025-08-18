@@ -9,7 +9,7 @@ from tokyy.utils import LogType, log_message
 
 
 class Resize:
-    def __init__(self, size):
+    def __init__( self, size ):
         self.size = size
 
     def __call__( self, rgb, depth ):
@@ -70,9 +70,13 @@ class RandomRotationByAngle:
 
 
 class ToTensor:
-    def __call__( self, rgb, depth ):
-        rgb = torch.from_numpy( rgb.transpose( 2, 0, 1 ) ).float() / 255.0
-        depth = torch.from_numpy( depth ).unsqueeze( 0 ).float() / 10.0
+    def __init__( self, rgb_normalize : float, depth_normalize : float ):
+        self.rgb_normlaize = rgb_normalize
+        self.depth_normalize = depth_normalize
+
+    def __call__( self, rgb, depth, rgb_normalize, depth_normalize ):
+        rgb = torch.from_numpy( rgb.transpose( 2, 0, 1 ) ).float() / self.rgb_normalize
+        depth = torch.from_numpy( depth ).unsqueeze( 0 ).float() / self.depth_normalize
         return rgb, depth
 
 

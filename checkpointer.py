@@ -4,7 +4,7 @@ import os
 
 from tokyy.utils import log_message, LogType
 from tokyy.metrics import Metrics, Metric
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 
 class Checkpointer:
@@ -16,6 +16,7 @@ class Checkpointer:
         self.scheduler = scheduler
         self.epoch = 0
         self.learning_rates= []
+        self.grad_norms = []
 
         self.losses = {
             'train' : [],
@@ -65,6 +66,7 @@ class Checkpointer:
         checkpoint[ 'epoch' ] = self.epoch
         checkpoint[ 'losses' ] = self.losses
         checkpoint[ '_losses' ] = self._losses
+        checkpoint[ 'grad_norms' ] = self.grad_norms
         checkpoint[ 'metrics' ] = self.metrics
         checkpoint[ 'learning_rates' ] = self.learning_rates
 
@@ -92,7 +94,8 @@ class Checkpointer:
         losses : Optional[ Dict[ str, float ] ] = None,
         metrics : Optional[ Dict[ Metrics, float ] ] = None,
         _losses : Optional[ Dict[ str, Dict[ str, float ] ] ] = None, 
-        learning_rate : float = 0.0 
+        learning_rate : float = 0.0,
+        grad_norm : List[ float ] = None
     ):
         """
         Updates the checkpointer with new values.
@@ -123,6 +126,7 @@ class Checkpointer:
 
         self.epoch = epoch
         self.learning_rates.append( learning_rate )
+        self.grad_norms.extend( grad_norm )
 
         for key, val in losses.items():
             if key not in self.losses:
@@ -211,6 +215,11 @@ class Checkpointer:
         else: 
             log_message( LogType.WARNING, "Scheduler learning rates not found in checkpoint" )
 
+        if 'grad_norms' in checkpoint:
+            instance.grad_norms = checkpoint[ 'grad_norms' ]
+        else:
+            log_message( LogType.WARNING, "Gradient norms not found in checkpoint" )
+
         if 'losses' in checkpoint:
             instance.losses = checkpoint[ 'losses' ]
         else:
@@ -226,6 +235,11 @@ class Checkpointer:
         else:
             log_message( LogType.WARNING, "Metrics not found in checkpoint" )
 
+        if 'epoch' in checkpoint:
+            instance.epoch = checkpoint[ 'epoch' ]
+        else:
+            log_message( LogType.WARNING, "Epoch not found in checkpoint." )
+
         log_message( LogType.SUCCESS, "Checkpoint loaded" )
 
         return instance
@@ -236,21 +250,24 @@ class Checkpointer:
         for key, val in self.metrics.items():
             if len( val ) > 0:
                 print( key.value, end = ' ' )
-                print( val[ - min( len( val ), last_n ) ] )
+                print( val[ - min( len( val ) - 1, last_n ) ] )
 
 
     def show_losses( self, last_n = 5   ):
         for key, val in self.losses.items():
             if len( val ) > 0:
                 print( key, end = ' ' )
-                print( val[ - min( len( val ), last_n ) ] )
+                print( val[ - min( len( val ) - 1, last_n ) ] )
 
         for _losses_set, _losses_dict in self._losses.items():
             for key, val in _losses_dict.items():
                 print( _losses_set, end = '_' )
                 if len( val ) > 0:
                     print( key, end = ' ' )
-                    print( val[ - min( len( val ), last_n ) ] )
+                    print( val[ - min( len( val ) - 1, last_n ) ] )
 
     def show_learning_rates( self, last_n = 5 ):
-        print( self.learning_rates[ -last_n ] )
+        print( self.learning_rates[ - min( len( self.learning_rates ) - 1, last_n ) ] )
+
+    def show_grad_norms( self, last_n = 5 ):
+        print( self.grad_norms[ - min( len( self.grad_norms ) - 1, last_n ) ] )
