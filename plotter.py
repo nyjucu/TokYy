@@ -183,45 +183,95 @@ class Plotter():
     def predict( self, suffix : str ):
         predicts_path = PREDICTS_DIR / ( get_new_file_number( PREDICTS_DIR ) + "_predicts_" + suffix )
 
-        file_paths = [
-            r"/home/TokYy/DL_Datasets/nyu/test/01149.h5",
-            r"/home/TokYy/DL_Datasets/nyu/test/00002.h5",
-            r"/home/TokYy/DL_Datasets/nyu/test/00009.h5",
-            r"/home/TokYy/DL_Datasets/nyu/test/00169.h5",
+        # file_paths = [
+        #     r"/home/TokYy/DL_Datasets/nyu/test/01149.h5",
+        #     r"/home/TokYy/DL_Datasets/nyu/test/00002.h5",
+        #     r"/home/TokYy/DL_Datasets/nyu/test/00009.h5",
+        #     r"/home/TokYy/DL_Datasets/nyu/test/00169.h5",
 
-            r"/home/TokYy/DL_Datasets/nyu/train/bedroom_0051/00001.h5",
-            r"/home/TokYy/DL_Datasets/nyu/train/classroom_0003/00001.h5",
-            r"/home/TokYy/DL_Datasets/nyu/train/dining_room_0033/00001.h5",
-            r"/home/TokYy/DL_Datasets/nyu/train/office_0025/00001.h5",
+        #     r"/home/TokYy/DL_Datasets/nyu/train/bedroom_0051/00001.h5",
+        #     r"/home/TokYy/DL_Datasets/nyu/train/classroom_0003/00001.h5",
+        #     r"/home/TokYy/DL_Datasets/nyu/train/dining_room_0033/00001.h5",
+        #     r"/home/TokYy/DL_Datasets/nyu/train/office_0025/00001.h5",
+        # ]
+
+        file_paths = [ 
+            ( r"/home/TokYy/DL_Datasets/kitty/data_rgb/2011_09_26_drive_0009_sync/image_02/data/0000000075.png", r"/home/TokYy/DL_Datasets/kitty/data_depth_annotated/train/2011_09_26_drive_0009_sync/proj_depth/groundtruth/image_02/0000000075.png" ),
+            ( r"/home/TokYy/DL_Datasets/kitty/data_rgb/2011_09_26_drive_0009_sync/image_02/data/0000000387.png", r"/home/TokYy/DL_Datasets/kitty/data_depth_annotated/train/2011_09_26_drive_0009_sync/proj_depth/groundtruth/image_02/0000000387.png" ),
+            ( r"/home/TokYy/DL_Datasets/kitty/data_rgb/2011_09_26_drive_0009_sync/image_02/data/0000000005.png", r"/home/TokYy/DL_Datasets/kitty/data_depth_annotated/train/2011_09_26_drive_0009_sync/proj_depth/groundtruth/image_02/0000000005.png" ),
+            ( r"/home/TokYy/DL_Datasets/kitty/data_rgb/2011_09_26_drive_0022_sync/image_02/data/0000000069.png", r"/home/TokYy/DL_Datasets/kitty/data_depth_annotated/train/2011_09_26_drive_0022_sync/proj_depth/groundtruth/image_02/0000000069.png" ),
+            ( r"/home/TokYy/DL_Datasets/kitty/data_rgb/2011_09_26_drive_0002_sync/image_02/data/0000000071.png", r"/home/TokYy/DL_Datasets/kitty/data_depth_annotated/val/2011_09_26_drive_0002_sync/proj_depth/groundtruth/image_02/0000000071.png" ),
+            ( r"/home/TokYy/DL_Datasets/kitty/data_rgb/2011_09_26_drive_0013_sync/image_02/data/0000000104.png", r"/home/TokYy/DL_Datasets/kitty/data_depth_annotated/val/2011_09_26_drive_0013_sync/proj_depth/groundtruth/image_02/0000000104.png" ),
+            ( r"/home/TokYy/DL_Datasets/kitty/data_rgb/2011_09_26_drive_0023_sync/image_02/data/0000000039.png", r"/home/TokYy/DL_Datasets/kitty/data_depth_annotated/val/2011_09_26_drive_0023_sync/proj_depth/groundtruth/image_02/0000000039.png" ),
+            ( r"/home/TokYy/DL_Datasets/kitty/data_rgb/2011_09_26_drive_0036_sync/image_02/data/0000000030.png", r"/home/TokYy/DL_Datasets/kitty/data_depth_annotated/val/2011_09_26_drive_0036_sync/proj_depth/groundtruth/image_02/0000000030.png" ),
         ]
+
+        # rgb_transform = T.Compose( [
+        #     T.ToTensor(),
+        #     T.Resize( ( 128, 128 ) ),
+        # ] )
+
+        # depth_transform = T.Compose( [
+        #     T.ToTensor(),
+        #     T.Resize( ( 128, 128 ) ),
+        # ] )
 
         rgb_transform = T.Compose( [
             T.ToTensor(),
-            T.Resize( ( 128, 128 ) ),
+            T.Resize( ( 128, 256 ) ),
         ] )
 
         depth_transform = T.Compose( [
             T.ToTensor(),
-            T.Resize( ( 128, 128 ) ),
+            T.Resize( ( 128, 256 ) ),
         ] )
 
         n = len( file_paths )
         _, axs = plt.subplots( n, 3, figsize = ( 12, 4 * n ) )
         
-        for i, file_path in enumerate( file_paths ):            
-            with h5py.File( file_path, 'r' ) as f:
-                rgb = np.array( f[ 'rgb' ] )
-                depth = np.array( f[ 'depth' ] )
+        # for i, file_path in enumerate( file_paths ):            
+        #     with h5py.File( file_path, 'r' ) as f:
+        #         rgb = np.array( f[ 'rgb' ] )
+        #         depth = np.array( f[ 'depth' ] )
 
-            if rgb.shape[ 0 ] == 3:
-                rgb = np.transpose( rgb, ( 1, 2, 0 ) )
+        #     if rgb.shape[ 0 ] == 3:
+        #         rgb = np.transpose( rgb, ( 1, 2, 0 ) )
 
-            rgb_tensor = rgb_transform( rgb ).unsqueeze( 0 ).to( torch.device( 'cpu' ) )
-            depth_tensor = depth_transform( depth ).squeeze().cpu().numpy() / 10.0
+        #     rgb_tensor = rgb_transform( rgb ).unsqueeze( 0 ).to( torch.device( 'cpu' ) )
+        #     depth_tensor = depth_transform( depth ).squeeze().cpu().numpy() / 10.0
+
+        #     with torch.no_grad():
+        #         pred = self.model( rgb_tensor )
+        #         pred = pred.squeeze().cpu().numpy() 
+
+        #     axs[ i ][ 0 ].imshow( rgb.astype( np.uint8 ) )
+        #     axs[ i ][ 0 ].set_title( f"RGB Image [{ i }]" )
+        #     axs[ i ][ 0 ].axis( "off" )
+
+        #     axs[ i ][ 1 ].imshow( depth_tensor, cmap = 'plasma' )
+        #     axs[ i ][ 1 ].set_title( "Ground Truth Depth" )
+        #     axs[ i ][ 1 ].axis( "off" )
+
+        #     axs[ i ][ 2 ].imshow( pred, cmap = 'plasma' )
+        #     axs[ i ][ 2 ].set_title( "Predicted Depth" )
+        #     axs[ i ][ 2 ].axis( "off" )
+
+         
+        for i, ( rgb_path, depth_path ) in enumerate( file_paths ):            
+            rgb = Image.open( rgb_path )
+
+            depth = Image.open( depth_path )
+
+            rgb_tensor = rgb_transform( rgb ).unsqueeze( 0 ).to( torch.device( 'cpu' ) ) / 255.0
+            depth_tensor = depth_transform( depth ).squeeze().cpu().numpy() / 255.0 
+
+            print( np.array( depth_tensor).max() )
 
             with torch.no_grad():
                 pred = self.model( rgb_tensor )
                 pred = pred.squeeze().cpu().numpy() 
+
+            rgb = np.array( rgb )
 
             axs[ i ][ 0 ].imshow( rgb.astype( np.uint8 ) )
             axs[ i ][ 0 ].set_title( f"RGB Image [{ i }]" )

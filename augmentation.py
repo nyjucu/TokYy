@@ -70,13 +70,15 @@ class RandomRotationByAngle:
 
 
 class ToTensor:
-    def __init__( self, rgb_normalize : float, depth_normalize : float ):
-        self.rgb_normlaize = rgb_normalize
+    def __init__( self, rgb_normalize : float = 1.0, depth_normalize : float = 1.0 ):
+        self.rgb_normalize = rgb_normalize
         self.depth_normalize = depth_normalize
 
-    def __call__( self, rgb, depth, rgb_normalize, depth_normalize ):
+    def __call__( self, rgb, depth ):
         rgb = torch.from_numpy( rgb.transpose( 2, 0, 1 ) ).float() / self.rgb_normalize
         depth = torch.from_numpy( depth ).unsqueeze( 0 ).float() / self.depth_normalize
+
+        depth = torch.log( depth + 1 ) / torch.log( torch.tensor( 22000.0 ) )
         return rgb, depth
 
 

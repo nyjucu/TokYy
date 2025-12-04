@@ -2,7 +2,7 @@ from tokyy.utils import LogType, log_message, get_new_file_number
 # from tokyy.models.resunet2 import ResUNet
 from tokyy.models.vision import ResUNet, ResCBAMUNet, AtrousResCBAMUNet
 import tokyy.datasets.vision
-from tokyy.datasets.vision import NyuDepthV2 
+from tokyy.datasets.vision import NyuDepthV2, Kitti
 from tokyy.checkpointer import Checkpointer
 from tokyy.metrics import Metrics
 from tokyy.augmentation import Resize, RandomCrop, RandomHorizontalFlip, ToTensor, ColorJitter, PairedCompose, RandomRotationByAngle
@@ -142,15 +142,14 @@ def show_one_sample( rgb_tensor, depth_tensor ):
 
 def show():
     paired_transform = PairedCompose([
-        Resize( ( 144, 192 ) ),
-        RandomRotationByAngle(),
+        Resize( ( 125, 414 ) ),
         RandomHorizontalFlip(),
-        RandomCrop( ( 128, 128 ) ),
-        ColorJitter(),
-        ToTensor()
+        ToTensor( rgb_normalize = 255.0, depth_normalize = 21995.0 )
     ])
 
-    dataset = NyuDepthV2( "/home/TokYy/DL_Datasets/nyu/test", paired_transform )
+    # dataset = NyuDepthV2( "/home/TokYy/DL_Datasets/nyu/test", paired_transform )
+    dataset = Kitti( depth_root_dir = "/home/TokYy/DL_Datasets/kitty/data_depth_annotated/train", rgb_root_dir = "/home/TokYy/DL_Datasets/kitty/data_rgb", transform = paired_transform )
+
 
     for rgb, depth in dataset:
         show_one_sample( rgb, depth )
@@ -165,6 +164,8 @@ def main():
         "cbam" : ResCBAMUNet,
         "atrous" : AtrousResCBAMUNet
     }
+    
+    return
 
     args = parse_plot_args()
 
@@ -195,4 +196,6 @@ def main():
 
 
 if __name__ == '__main__':
+    # show()
+
     main()

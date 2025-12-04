@@ -7,6 +7,8 @@ import h5py
 import numpy as np
 from tokyy.utils import LogType, log_message
 import sys
+from tqdm import tqdm
+
 
 class NyuDepthV2( Dataset ):
     def __init__( self, root_dir : str, transform ):
@@ -82,7 +84,6 @@ class Kitti( Dataset ):
                     n_files_not_found += 1
                     continue
 
-
                 rgb_drive_path_to_03 = os.path.join( rgb_drive_path, "image_03", "data" )
                 rgb_drive_path_to_02 = os.path.join( rgb_drive_path, "image_02", "data" )
 
@@ -128,6 +129,8 @@ class Kitti( Dataset ):
 
         depth = Image.open( depth_image_path )
         depth = np.array( depth )
+        
+        depth[ depth == 0.0 ] = 21000
 
         rgb = Image.open( rgb_image_path )
         rgb = np.array( rgb )
@@ -135,11 +138,11 @@ class Kitti( Dataset ):
         if self.transform is None:
             return ( rgb, depth )
         
-        return self.transform( ( rgb, depth ) )
+        return self.transform( rgb, depth )
         
 
-def test( dataset  ):
-    print(f"Dataset length: { len( dataset ) }" )
+def some_info( dataset  ):
+    print( f"Dataset length: { len( dataset ) }" )
 
     rgb, depth = dataset[ 0 ]
 
@@ -150,7 +153,7 @@ def test( dataset  ):
     rgb_min, rgb_max = float( 'inf' ), float( '-inf' )
     depth_min, depth_max = float( 'inf' ), float( '-inf' )
 
-    for i in range( len( dataset ) ):
+    for i in tqdm( range( len( dataset ) ), desc = "Parsing dataset" ):
         rgb, depth = dataset[i]
         
         rgb_min = min( rgb_min, rgb.min().item() )
@@ -158,8 +161,6 @@ def test( dataset  ):
         
         depth_min = min( depth_min, depth.min().item() )
         if depth_max < depth.max().item(): depth_max = depth.max().item()
-
-        print( depth_max )
 
     print( f'RGB Min: { rgb_min }, RGB Max: { rgb_max }' )
     print( f'Depth Min: { depth_min }, Depth Max: { depth_max }' )

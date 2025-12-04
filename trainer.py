@@ -169,7 +169,7 @@ class Trainer():
                 if ( i + 1 ) % self.accum_steps == 0 or ( i + 1 ) == len( self.train_loader ):
                     self.scaler.unscale_( self.optimizer )
 
-                    # torch.nn.utils.clip_grad_norm_( self.model.parameters(), max_norm = 1.0 )
+                    torch.nn.utils.clip_grad_norm_( self.model.parameters(), max_norm = 1.0 )
 
                     grad_norm.append( self.get_grad_norm().item() )
 
@@ -247,7 +247,7 @@ class Trainer():
 
             self.checkpointer.save( self.checkpoint_path )
 
-            print( self.checkpointer.grad_norms )
+            # print( self.checkpointer.grad_norms )
 
             log_message( LogType.SUCCESS, f"Model trained for { epoch + 1 } epoch[s]" )
 
@@ -261,6 +261,12 @@ class Trainer():
             2
         )
 
+    # def get_grad_norm( self ):
+    #     grads = [ p.grad.detach() for p in self.model.parameters() if p.grad is not None ]
+    #     if not grads:
+    #         return torch.tensor( 0.0, device = self.device )
+    #     total_norm = torch.norm( torch.stack( [ torch.norm( g, 2 ) for g in grads ] ), 2 )
+    #     return total_norm
 
     @staticmethod
     def clear_cache():
