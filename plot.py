@@ -1,6 +1,7 @@
 from tokyy.utils import LogType, log_message, get_new_file_number
 # from tokyy.models.resunet2 import ResUNet
 from tokyy.models.vision import ResUNet, ResCBAMUNet, AtrousResCBAMUNet
+from tokyy.models.resnet50 import ResUNet50
 import tokyy.datasets.vision
 from tokyy.datasets.vision import NyuDepthV2, Kitti
 from tokyy.checkpointer import Checkpointer
@@ -162,11 +163,10 @@ def main():
     name_to_architecture = {
         "resunet" : ResUNet,
         "cbam" : ResCBAMUNet,
-        "atrous" : AtrousResCBAMUNet
+        "atrous" : AtrousResCBAMUNet,
+        "50" : ResUNet50
     }
     
-    return
-
     args = parse_plot_args()
 
     suffix = os.path.splitext( args.checkpoint_name )[ 0 ]

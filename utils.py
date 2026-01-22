@@ -67,7 +67,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument( "--accum-steps", type = int, default = 1, help = "Gradient accumulation steps." )
     parser.add_argument( "--max-epochs", type = int, default = 5, help = "Training maximum epochs." )
 
-    parser.add_argument( "--architecture", type = str, default = "cbam", help = "Architecture of the model to train [resunet, cbam, atrous]." )
+    parser.add_argument( "--architecture", type = str, default = "cbam", help = "Architecture of the model to train [ unet, cbam, atrous, 50 ]." )
 
     args = parser.parse_args()
 
@@ -76,7 +76,8 @@ def parse_args() -> argparse.Namespace:
     name_to_architecture = {
         "unet" : "ResUNet",
         "cbam" : "ResCBAMUNet",
-        "atrous" : "AtrousResCBAMUNet"
+        "atrous" : "AtrousResCBAMUNet",
+        "50" : "ResUNet50"
     }
     log_message( LogType.NONE, f"Model architecture is set to { name_to_architecture[ args.architecture ] }" )
     args.image_size = tuple( args.image_size )

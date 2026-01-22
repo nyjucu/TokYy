@@ -190,7 +190,7 @@ class FeaturePyramidNetwork( nn.Module ):
         merged = c_conv + p_upsampled
         out = self.conv( merged )
 
-        return out\
+        return out
         
 
 
@@ -382,14 +382,12 @@ class Encoder( nn.Module ):
 class DecoderBlock( nn.Module ):
     def __init__( self, in_channels, skip_channels, out_channels ):
         super().__init__()
-        self.att = AttentionGate( skip_channels, skip_channels, skip_channels )
         self.upsamp = nn.ConvTranspose2d( in_channels, out_channels, 2, stride = 2 )
         self.resconv = ResBlock( out_channels + skip_channels, out_channels )
 
     def forward( self, x, skip ):
         x_up = self.upsamp( x )
-        att_skip = self.att( x_up, skip )
-        x_cat = torch.cat( [ x_up, att_skip ], dim = 1 ) 
+        x_cat = torch.cat( [ x_up, skip ], dim = 1 ) 
         return self.resconv( x_cat )
         
 
@@ -413,3 +411,26 @@ class ResUNet( nn.Module ):
         out = self.output( d4 )
 
         return out
+
+
+class SlimDecoderBlock( nn.Module ):
+    def __init__( self, in_channels, skip_channels, out_channels, do_upsample = True ):
+        super().__init__()
+        self.do_upsample = do_upsample
+        self.upsamp = nn.ConvTranspose2d( in_channels, out_channels, kernel_size = 2, stride = 2 )
+        self.conv = nn.Sequential(
+            nn.Conv2d( out_channels + skip_channels, out_channels, kernel_size= 3, padding= 1, bias = False ),
+            nn.BatchNorm2d( out_channels),
+            nn.ReLU( inplace = True )
+        )
+
+    def forward( self, x, skip ):
+        x_up = self.upsamp(x) if self.do_upsample else x
+
+        if x_up.shape[ 2: ] != skip.shape[ 2: ]:
+            diff_h = skip.size( 2 ) - x_up.size( 2 )
+            diff_w = skip.size( 3 ) - x_up.size( 3 )
+            x_up = F.pad(x_up, [ 0, diff_w, 0, diff_h ] )
+
+        x_cat = torch.cat( [ x_up, skip ], dim = 1 )
+        return self.conv( x_cat )
