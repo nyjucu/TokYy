@@ -1,0 +1,14 @@
+{
+    "model": "tokyy.models.vision.ResCBAMUNet",
+    "optimizer": "AdamW",
+    "scaler": "GradScaler",
+    "scheduler": "NoneType",
+    "epochs": 29,
+    "batch": 16,
+    "accum": 2,
+    "time": {
+        "start": "2026-04-23T11:18:51.707330",
+        "end": "2026-04-23T12:54:33.349774"
+    },
+    "dataset": "NoneType"
+}

@@ -2,9 +2,13 @@ from pathlib import Path
 
 BASE_DIR = Path( __file__ ).resolve().parent
 
-CHECKPOINTS_DIR = BASE_DIR / "checkpoints"
+MODELS_DIR = BASE_DIR / "models_info"
 
-RESULTS_DIR = BASE_DIR / "results"
+CHECKPOINTS_DIR = MODELS_DIR / "checkpoints"
+
+MODELS_DATA_DIR = MODELS_DIR / "model_data"
+
+RESULTS_DIR = MODELS_DIR / "results"
 
 LOSSES_DIR = RESULTS_DIR / "losses"
 _LOSSES_DIR = RESULTS_DIR / "_losses"
@@ -17,7 +21,9 @@ PREDICTS_DIR = RESULTS_DIR / "predicts"
 OTHERS_DIR = RESULTS_DIR / "others"
 GRAD_DIR = RESULTS_DIR / "grad"
 
+MODELS_DIR.mkdir( parents = True, exist_ok = True)
 CHECKPOINTS_DIR.mkdir( parents = True, exist_ok = True)
+MODELS_DATA_DIR.mkdir( parents = True, exist_ok = True)
 RESULTS_DIR.mkdir( parents = True, exist_ok = True)
 METRICS_DIR.mkdir( parents = True, exist_ok = True)
 LOSSES_DIR.mkdir( parents = True, exist_ok = True)

@@ -16,8 +16,6 @@ import matplotlib.pyplot as plt
 
 from PIL import Image
 
-
-
 class Plotter():
     def __init__( self, model : torch.nn.Module, checkpointer : Checkpointer ):
         self.model = model

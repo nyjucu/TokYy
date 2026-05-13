@@ -21,6 +21,8 @@ import matplotlib.pyplot as plt
  
 import numpy as np
 
+from tqdm import tqdm
+
 from typing import Dict, Tuple
 
 import os
@@ -32,6 +34,20 @@ device = torch.device( "cuda" if torch.cuda.is_available() else "cpu" )
 
 from tokyy.plotter import Plotter
 
+
+# paired_transform = PairedCompose([
+#         Resize( ( 144, 192 ) ),
+#         RandomHorizontalFlip(),
+#         ToTensor( rgb_normalize = 255.0, depth_normalize = 10 )
+#     ])
+
+paired_transform = PairedCompose( [
+        Resize( ( 144, 192 ) ), 
+        RandomHorizontalFlip(),
+        RandomCrop( (128, 128) ),
+        ColorJitter(),
+        ToTensor( rgb_normalize = 255.0, depth_normalize = 10.0 )
+    ] )
 
 def load_model_and_checkpointer( model, checkpoint_path ) -> Tuple[ torch.nn.Module, Checkpointer ]:
     cp = Checkpointer.load(
@@ -79,10 +95,10 @@ def batch( model : torch.nn.Module ):
 
 def dataset():
     batch_size = 32
-    # n_samples = 2_000
+    n_samples = 2_000
 
-    train_dataset = NyuDepthV2( "/home/TokYy/DL_Datasets/nyu/train", transform = tokyy.datasets.vision.rgb_transform, depth_transform = tokyy.datasets.vision.depth_transform )
-    test_dataset = NyuDepthV2( "/home/TokYy/DL_Datasets/nyu/test", transform = tokyy.datasets.vision.rgb_transform, depth_transform = tokyy.datasets.vision.depth_transform )
+    train_dataset = NyuDepthV2( "/home/TokYy/DL_Datasets/nyu/train", transform = paired_transform )
+    test_dataset = NyuDepthV2( "/home/TokYy/DL_Datasets/nyu/test", transform = paired_transform )
 
     train_loader = DataLoader( train_dataset, batch_size = batch_size, shuffle = True, num_workers = 8, pin_memory = True )
     test_loader = DataLoader( test_dataset, batch_size = batch_size, shuffle = False, num_workers = 8, pin_memory = True )
@@ -96,23 +112,23 @@ def dataset():
     log_message( LogType.NONE, f"With a batch size of { batch_size } ==> { len( train_loader ) } batches for training" )
     log_message( LogType.NONE, f"With a batch size of { batch_size } ==> { len( test_loader ) } batches for testing" )
 
-    # min_val = float( 'inf' )
-    # max_val = float( '-inf' )
+    min_val = float( 'inf' )
+    max_val = float( '-inf' )
 
-    # for i in tqdm( range( n_samples ) ):
-    #     _, depth = train_loader.dataset[ i ]
+    for i in tqdm( range( n_samples ) ):
+        _, depth = train_loader.dataset[ i ]
         
-    #     depth = depth.float()
+        depth = depth.float()
 
-    #     batch_min = depth.min().item()
-    #     batch_max = depth.max().item()
+        batch_min = depth.min().item()
+        batch_max = depth.max().item()
 
-    #     min_val = min( min_val, batch_min )
-    #     max_val = max( max_val, batch_max )
+        min_val = min( min_val, batch_min )
+        max_val = max( max_val, batch_max )
 
-    # log_message( LogType.WARNING, f"Depth Min and Max extracted from the first { n_samples } samples" )
-    # log_message( LogType.NONE, f"Depth Min: { min_val }" )
-    # log_message( LogType.NONE, f"Depth Max: { max_val }" )
+    log_message( LogType.WARNING, f"Depth Min and Max extracted from the first { n_samples } samples" )
+    log_message( LogType.NONE, f"Depth Min: { min_val }" )
+    log_message( LogType.NONE, f"Depth Max: { max_val }" )
 
 
 def show_one_sample( rgb_tensor, depth_tensor ):
@@ -120,6 +136,7 @@ def show_one_sample( rgb_tensor, depth_tensor ):
         rgb_tensor = np.transpose( rgb_tensor, ( 1, 2, 0 ) )
 
     rgb_img = rgb_tensor.cpu().numpy()
+    #rgb_img = rgb_tensor.cpu().numpy().transpose(2, 0, 1)
     depth_tensor = depth_tensor.squeeze().cpu().numpy()
 
     log_message( LogType.NONE, f"RGB min: { rgb_tensor.min() }, max: { rgb_tensor.max() }" )
@@ -142,14 +159,8 @@ def show_one_sample( rgb_tensor, depth_tensor ):
 
 
 def show():
-    paired_transform = PairedCompose([
-        Resize( ( 125, 414 ) ),
-        RandomHorizontalFlip(),
-        ToTensor( rgb_normalize = 255.0, depth_normalize = 21995.0 )
-    ])
-
-    # dataset = NyuDepthV2( "/home/TokYy/DL_Datasets/nyu/test", paired_transform )
-    dataset = Kitti( depth_root_dir = "/home/TokYy/DL_Datasets/kitty/data_depth_annotated/train", rgb_root_dir = "/home/TokYy/DL_Datasets/kitty/data_rgb", transform = paired_transform )
+    dataset = NyuDepthV2( "/home/TokYy/DL_Datasets/nyu/test", paired_transform )
+    #dataset = NyuDepthV2("/home/TokYy/DL_Datasets/nyu/train", transform=paired_transform)
 
 
     for rgb, depth in dataset:
@@ -196,6 +207,8 @@ def main():
 
 
 if __name__ == '__main__':
-    # show()
-
+    #show()
+    
     main()
+
+    #dataset()

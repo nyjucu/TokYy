@@ -78,7 +78,7 @@ class ToTensor:
         rgb = torch.from_numpy( rgb.transpose( 2, 0, 1 ) ).float() / self.rgb_normalize
         depth = torch.from_numpy( depth ).unsqueeze( 0 ).float() / self.depth_normalize
 
-        depth = torch.log( depth + 1 ) / torch.log( torch.tensor( 22000.0 ) )
+        #depth = torch.log( depth + 1 ) / torch.log( torch.tensor( 22000.0 ) )
         return rgb, depth
 
 

@@ -1,19 +1,24 @@
 from tokyy.utils import LogType, log_message, ask_yes_no
 from tokyy.checkpointer import Checkpointer
 from tokyy.metrics import Metric, Metrics
+from tokyy import CHECKPOINTS_DIR, _LOSSES_TEST_DIR, _LOSSES_TRAIN_DIR, _LOSSES_VAL_DIR, MODELS_DATA_DIR, GRAD_DIR, LEARNING_RATES_DIR, METRICS_DIR, LOSSES_DIR, OTHERS_DIR, PREDICTS_DIR
 
 import torch, gc
 from torch.utils.data import DataLoader
 from torch.amp import autocast
+from torch.amp.grad_scaler import GradScaler
 
 import torchvision.transforms as T
+
+import json
 
 import os
 
 from tqdm import tqdm
 
-from typing import List
+from typing import List, Optional
 
+from datetime import datetime
 
 class Trainer():
     ask_before = True
@@ -22,10 +27,20 @@ class Trainer():
     clear_cache = True
     augment_data = True
 
-    def __init__( self, model : torch.nn, optimizer : torch.optim, criterion : torch.nn, metrics : List[ Metrics ], checkpoint_path : str, scaler = None, scheduler = None ):
+    def __init__( 
+        self, 
+        model : torch.nn.Module, 
+        optimizer : torch.optim.Optimizer, 
+        criterion : torch.nn.Module, 
+        metrics : List[ Metrics ], 
+        checkpoint_path : str, 
+        model_json_save_file : str, 
+        scaler: torch.amp.grad_scaler.GradScaler = GradScaler, 
+        scheduler: Optional[ torch.optim.lr_scheduler.LRScheduler ] = None, 
+        ):
+
         self.model = model.to( Trainer.device )
         self.optimizer = optimizer
-
         self.scaler = scaler
 
         if type( scheduler ) == torch.optim.lr_scheduler.OneCycleLR:
@@ -37,8 +52,26 @@ class Trainer():
         self.metric = Metric( metrics = metrics, device = Trainer.device )
         
         self.checkpoint_path = checkpoint_path
-        self.checkpointer = Checkpointer.load( model = self.model, optimizer = self.optimizer, scaler = self.scaler, scheduler =self.scheduler, path = self.checkpoint_path, criterion = self.criterion ) if os.path.exists( checkpoint_path ) else Checkpointer( model, optimizer, scaler = scaler, scheduler = scheduler, criterion = criterion )
+        #self.checkpointer = Checkpointer.load( model = self.model, optimizer = self.optimizer, scaler = self.scaler, scheduler =self.scheduler, path = self.checkpoint_path, criterion = self.criterion ) if os.path.exists( checkpoint_path ) else Checkpointer( model, optimizer, scaler = scaler, scheduler = scheduler, criterion = criterion )
         
+        if os.path.exists(self.checkpoint_path):
+            self.checkpointer = Checkpointer.load(
+                model=self.model,
+                optimizer=self.optimizer,
+                scaler=self.scaler,
+                scheduler=self.scheduler,
+                path=self.checkpoint_path,
+                criterion=self.criterion
+            )
+        else:
+            self.checkpointer = Checkpointer(
+                model=self.model,
+                optimizer=self.optimizer,
+                scaler=self.scaler,
+                scheduler=self.scheduler,
+                criterion=self.criterion
+            )
+
         self.num_workers = 8
 
         self.dataset = None
@@ -50,6 +83,12 @@ class Trainer():
         self.max_epochs = 100
         self.epochs_per_session = 20
         self.scheduler_steps_per_epoch = 0
+
+        self.start_time = datetime.now()
+        self.end_time = self.start_time
+
+        self.model_json_save_file = os.path.splitext(model_json_save_file)[0] + ".json"
+        self.model_json_path = MODELS_DATA_DIR / model_json_save_file
 
         log_message( LogType.OK, f"Using device: { self.device }" )
 
@@ -248,6 +287,41 @@ class Trainer():
             self.checkpointer.save( self.checkpoint_path )
 
             # print( self.checkpointer.grad_norms )
+
+            self.end_time = datetime.now()
+
+            model_data = {
+                "model"     :       self.model.__class__.__module__ + "." + self.model.__class__.__name__,
+                "optimizer" :       self.optimizer.__class__.__name__,
+                "scaler"    :       self.scaler.__class__.__name__,
+                "scheduler" :       self.scheduler.__class__.__name__,
+                "epochs"    :       epoch,
+                "batch"     :       self.batch_size,
+                "accum"     :       self.accum_steps,
+                "time"          :       {
+                    "start"     :       self.start_time.isoformat(),
+                    "end"       :       self.end_time.isoformat()
+                },
+                "dataset"   :       self.dataset.__class__.__name__,
+                # "result_paths"  :   {
+                #     k: str( v / self.model_json_save_file )
+                #     for k, v in {
+                #         "_losses_test": _LOSSES_TEST_DIR,
+                #         "_losses_train": _LOSSES_TRAIN_DIR,
+                #         "_losses_val": _LOSSES_VAL_DIR,
+                #         "grad": GRAD_DIR,
+                #         "learning_rates": LEARNING_RATES_DIR,
+                #         "losses": LOSSES_DIR,
+                #         "metrics": METRICS_DIR,
+                #         "others": OTHERS_DIR,
+                #         "predicts": PREDICTS_DIR,
+                #     }.items()
+                # }
+            }
+
+            with open( self.model_json_path, "w" ) as f:
+                json.dump( model_data, f, indent = 4 )
+                log_message( LogType.SUCCESS, f"Model data saved at f{self.model_json_path}" )
 
             log_message( LogType.SUCCESS, f"Model trained for { epoch + 1 } epoch[s]" )
 

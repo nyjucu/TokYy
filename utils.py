@@ -25,7 +25,7 @@ def ask_yes_no( question ):
             print( "Invalid command." )
 
 
-def log_message( type, msj = '', exit = False, log = True ):
+def log_message( type : LogType, msj : str = '', exit : bool = False, log : bool = True ):
     if not log:
         return LogType.OK
 
@@ -66,8 +66,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument( "--batch-size", type = int, default = 32, help = "Training batch size." )
     parser.add_argument( "--accum-steps", type = int, default = 1, help = "Gradient accumulation steps." )
     parser.add_argument( "--max-epochs", type = int, default = 5, help = "Training maximum epochs." )
+    parser.add_argument( "--epochs-per-session", type = int, default = 5, help = "Training maximum epochs per session." )
 
-    parser.add_argument( "--architecture", type = str, default = "cbam", help = "Architecture of the model to train [ unet, cbam, atrous, 50 ]." )
+    parser.add_argument( "--architecture", type = str, default = "cbam", help = "Architecture of the model to train [ unet, cbam, atrous, 50 ]. Default cbam." )
 
     args = parser.parse_args()
 
@@ -106,7 +107,7 @@ def parse_plot_args() -> argparse.Namespace:
     parser.add_argument( "--delete-by-suffix", type = str, help = "Delete plots by suffix." )
 
     parser.add_argument( "--checkpoint-dir", type = Path, default = CHECKPOINTS_DIR, help = "Path to the checkpoint directory. Default at /checkpoints" )
-    parser.add_argument( "--checkpoint-name", type = str, default = "sicucoaiele.pt", help = "Checkpoint file name." )
+    parser.add_argument( "--checkpoint-name", type = str, default = "default.pt", help = "Checkpoint file name." )
 
     parser.add_argument( "--arch", type = str, default = "cbam", help = "Architecture of the model to train [resunet, cbam, atrous]." )
 
