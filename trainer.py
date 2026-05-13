@@ -6,7 +6,6 @@ from tokyy import CHECKPOINTS_DIR, _LOSSES_TEST_DIR, _LOSSES_TRAIN_DIR, _LOSSES_
 import torch, gc
 from torch.utils.data import DataLoader
 from torch.amp import autocast
-from torch.amp.grad_scaler import GradScaler
 
 import torchvision.transforms as T
 
@@ -35,8 +34,8 @@ class Trainer():
         metrics : List[ Metrics ], 
         checkpoint_path : str, 
         model_json_save_file : str, 
-        scaler: torch.amp.grad_scaler.GradScaler = GradScaler, 
-        scheduler: Optional[ torch.optim.lr_scheduler.LRScheduler ] = None, 
+        scaler: Optional[torch.cuda.amp.GradScaler] = None, 
+        scheduler: Optional[torch.optim.lr_scheduler.LRScheduler] = None, 
         ):
 
         self.model = model.to( Trainer.device )
